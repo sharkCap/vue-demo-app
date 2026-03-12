@@ -5,7 +5,7 @@
       <router-link to="/" class="nav-logo">
         <span class="logo-icon">🦑</span>
         <span class="logo-text">
-          <span class="logo-title">深海王</span>
+          <span class="logo-title">零号机</span>
           <span class="logo-badge">OpenClaw</span>
         </span>
       </router-link>

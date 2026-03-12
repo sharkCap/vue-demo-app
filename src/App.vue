@@ -17,7 +17,7 @@ import NavigationBar from './components/NavigationBar.vue'
       <div class="footer-content">
         <div class="footer-left">
           <span class="footer-logo">🦑</span>
-          <span class="footer-text">深海王 · OpenClaw</span>
+          <span class="footer-text">零号机 · OpenClaw</span>
         </div>
         <div class="footer-links">
           <a href="https://docs.openclaw.ai" target="_blank">文档</a>
