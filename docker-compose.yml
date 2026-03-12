@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # 前端服务 (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9969:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # 后端服务 (Express)
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://admin:deepsea2026secure@mongodb:27017/todolist?authSource=admin
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  # 数据库 (MongoDB) - 不暴露端口到公网
+  mongodb:
+    image: mongo:7-jammy
+    # ports:
+    #   - "27017:27017"  # 移除公网暴露，只允许内部访问
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=deepsea2026secure
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge
