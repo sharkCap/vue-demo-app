@@ -132,8 +132,9 @@
 
     <!-- Edit Modal -->
     <Teleport to="body">
-      <transition name="modal">
-        <div v-if="editingTodo" class="modal-overlay" @click.self="cancelEdit" @keydown.escape="cancelEdit" tabindex="-1">
+      <div v-show="editingTodo" class="modal-container">
+        <transition name="modal">
+          <div v-if="editingTodo" class="modal-overlay" @click.self="cancelEdit" @keydown.escape="cancelEdit" tabindex="-1">
           <div class="modal-content">
             <div class="modal-header">
               <h2>编辑任务</h2>
@@ -185,6 +186,7 @@
           </div>
         </div>
       </transition>
+      </div>
     </Teleport>
 
     <!-- Clear Completed -->
@@ -345,10 +347,7 @@ const openEdit = (todo) => {
 }
 
 const cancelEdit = () => {
-  // 添加短暂延迟确保动画完成
-  setTimeout(() => {
-    editingTodo.value = null
-  }, 300)
+  editingTodo.value = null
 }
 
 const updateTodo = async () => {
@@ -777,16 +776,24 @@ onMounted(() => {
 }
 
 /* Modal */
-.modal-overlay {
+.modal-container {
   position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.modal-overlay {
+  position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   padding: var(--space-4);
+  pointer-events: auto;
+  will-change: opacity;
 }
 
 .modal-content {
@@ -796,6 +803,8 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .modal-header {
@@ -957,12 +966,9 @@ onMounted(() => {
   transform: translateX(20px);
 }
 
-.modal-enter-active {
-  transition: opacity 0.3s ease;
-}
-
+.modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease-out;
 }
 
 .modal-enter-from,
@@ -970,17 +976,14 @@ onMounted(() => {
   opacity: 0;
 }
 
-.modal-enter-active .modal-content {
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
+.modal-enter-active .modal-content,
 .modal-leave-active .modal-content {
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.15s ease-out;
 }
 
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
-  transform: scale(0.95) translateY(-10px);
+  transform: scale(0.98);
 }
 
 /* Responsive */
