@@ -133,7 +133,7 @@
     <!-- Edit Modal -->
     <Teleport to="body">
       <transition name="modal">
-        <div v-if="editingTodo" class="modal-overlay" @click.self="cancelEdit">
+        <div v-if="editingTodo" class="modal-overlay" @click.self="cancelEdit" @keydown.escape="cancelEdit" tabindex="-1">
           <div class="modal-content">
             <div class="modal-header">
               <h2>编辑任务</h2>
@@ -337,10 +337,18 @@ const deleteTodo = async (id) => {
 
 const openEdit = (todo) => {
   editingTodo.value = { ...todo }
+  // 延迟设置焦点，确保DOM已渲染
+  setTimeout(() => {
+    const modal = document.querySelector('.modal-overlay')
+    if (modal) modal.focus()
+  }, 50)
 }
 
 const cancelEdit = () => {
-  editingTodo.value = null
+  // 添加短暂延迟确保动画完成
+  setTimeout(() => {
+    editingTodo.value = null
+  }, 300)
 }
 
 const updateTodo = async () => {
@@ -949,9 +957,12 @@ onMounted(() => {
   transform: translateX(20px);
 }
 
-.modal-enter-active,
+.modal-enter-active {
+  transition: opacity 0.3s ease;
+}
+
 .modal-leave-active {
-  transition: all var(--transition-normal);
+  transition: opacity 0.2s ease;
 }
 
 .modal-enter-from,
@@ -959,9 +970,17 @@ onMounted(() => {
   opacity: 0;
 }
 
+.modal-enter-active .modal-content {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-leave-active .modal-content {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
-  transform: scale(0.95);
+  transform: scale(0.95) translateY(-10px);
 }
 
 /* Responsive */
