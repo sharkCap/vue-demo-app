@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # 阶段2: Nginx服务
-FROM nginx:alpine
+FROM docker.io/nginx:1.25-alpine
 
 # 设置容器时区（北京时间）
 RUN apk add --no-cache tzdata && \

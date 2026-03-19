@@ -73,6 +73,7 @@ const { isDark, toggleTheme } = useTheme()
 const navLinks = [
   { path: '/', label: '首页', icon: '🏠' },
   { path: '/todo', label: 'Todo', icon: '✓' },
+  { path: '/changelog', label: '更新日志', icon: '📋' },
   { path: '/architecture', label: '架构', icon: '§' },
   { path: '/deployment', label: '部署', icon: '◇' },
   { path: '/server-info', label: '状态', icon: '◉' },

@@ -6,6 +6,7 @@ const ArchitectureView = () => import('../views/ArchitectureView.vue')
 const DeploymentView = () => import('../views/DeploymentView.vue')
 const ServerInfoView = () => import('../views/ServerInfoView.vue')
 const TodoView = () => import('../views/TodoView.vue')
+const ChangelogView = () => import('../views/ChangelogView.vue')
 
 // 路由配置
 const routes = [
@@ -52,6 +53,15 @@ const routes = [
     meta: {
       title: 'Todo List',
       description: '任务管理 - 高效完成目标'
+    }
+  },
+  {
+    path: '/changelog',
+    name: 'changelog',
+    component: ChangelogView,
+    meta: {
+      title: '更新日志',
+      description: 'OpenClaw版本更新记录与功能迭代'
     }
   },
   // 404 页面
