@@ -74,7 +74,7 @@
                     v-for="(changes, category) in release.changes" 
                     :key="category" 
                     class="change-category"
-                    v-if="changes.length > 0"
+                    v-if="changes && changes.length > 0"
                   >
                     <div class="category-header">
                       <h3 class="category-title">
