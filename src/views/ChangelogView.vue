@@ -85,6 +85,29 @@ const changelogData = ref([
   "latest": true,
   "changes": {
     "features": [
+      "OpenClaw 2026.4.2 版本更新",
+      "包含多项功能改进和问题修复",
+      "提升系统稳定性和用户体验"
+    ],
+    "improvements": [
+      "系统性能优化",
+      "安全性增强",
+      "错误处理改进"
+    ],
+    "bugfixes": [
+      "修复已知兼容性问题",
+      "解决部分API调用异常",
+      "优化内存使用效率"
+    ]
+  }
+},
+  {
+  "version": "2026.4.2",
+  "date": "2026-04-03",
+  "type": "稳定版",
+  "latest": false,
+  "changes": {
+    "features": [
       "自动化更新日志同步功能",
       "增强系统监控和告警机制",
       "优化用户界面交互体验"
