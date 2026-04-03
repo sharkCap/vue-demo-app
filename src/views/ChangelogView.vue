@@ -79,10 +79,32 @@ import { ref, computed } from 'vue'
 // 更新日志数据
 const changelogData = ref([
   {
+  "version": "2026.4.2",
+  "date": "2026-04-03",
+  "type": "稳定版",
+  "latest": true,
+  "changes": {
+    "features": [
+      "自动化更新日志同步功能",
+      "增强系统监控和告警机制",
+      "优化用户界面交互体验"
+    ],
+    "improvements": [
+      "提升系统稳定性和性能",
+      "改进错误处理和恢复机制",
+      "增强安全性和权限控制"
+    ],
+    "bugfixes": [
+      "修复已知的兼容性问题",
+      "解决部分API调用异常"
+    ]
+  }
+},
+  {
   "version": "2026.3.9",
   "date": "2026-03-19",
   "type": "稳定版",
-  "latest": true,
+  "latest": false,
   "changes": {
     "features": [
       "自动化更新日志同步功能",
