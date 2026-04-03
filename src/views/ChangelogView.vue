@@ -85,24 +85,24 @@ const changelogData = ref([
   "latest": true,
   "changes": {
     "features": [
-      "restore the core Task Flow substrate with managed-vs-mirrored sync modes",
-      "add assistant-role entrypoints plus Google Assistant App Actions metadata",
-      "add a dedicated Drive comment-event flow with comment-thread context resolution",
-      "emit spec-compliant `m.mentions` metadata across text sends",
-      "resolve `agents.defaults.compaction.model` consistently",
-      "add `reactionLevel` guidance for agent reactions"
+      "恢复核心任务流(Task Flow)底层架构，支持托管与镜像同步模式",
+      "Android助手集成Google Assistant应用操作元数据",
+      "飞书文档评论事件流，支持评论线程上下文解析",
+      "Matrix插件支持规范化的提及元数据",
+      "优化代理压缩模型的一致性解析",
+      "WhatsApp反应功能增加指导级别"
     ],
     "improvements": [
-      "⚠️ move `x_search` settings from the legacy core `tools.web.x_search.*` path",
-      "⚠️ move Firecrawl `web_fetch` config from the legacy core path"
+      "⚠️ xAI插件搜索设置迁移到插件自有配置路径",
+      "⚠️ Web Fetch插件Firecrawl配置迁移到插件自有路径"
     ],
     "bugfixes": [
-      "centralize request auth, proxy, TLS, and header shaping",
-      "restore legacy-role fallback for empty paired-device token maps",
-      "pin admin-only subagent gateway calls to `operator.admin`",
-      "strip invalid `security`, `ask`, and `askFallback` values",
-      "add built-in Slack mrkdwn guidance in inbound context",
-      "send `unavailable` presence on connect in self-chat mode"
+      "集中化请求认证、代理、TLS和头部处理策略",
+      "恢复空配对设备令牌映射的遗留角色回退",
+      "代理子代理调用权限优化",
+      "执行审批配置验证和清理",
+      "修复Slack Markdown格式化指导",
+      "修复WhatsApp连接时的在线状态处理"
     ]
   }
 },
@@ -113,15 +113,15 @@ const changelogData = ref([
   "latest": false,
   "changes": {
     "features": [
-      "stop ambient core helper and setup paths from loading non-selected bundled plugins",
-      "keep room-level `account` scoping and inherited room overrides",
-      "prefer explicit QR bootstrap auth over earlier Tailscale auth classification"
+      "停止加载非选择的捆绑插件",
+      "保持房间级别的账户范围和继承的房间覆盖",
+      "优先使用显式QR引导认证而非早期的Tailscale认证分类"
     ],
     "improvements": [],
     "bugfixes": [
-      "stop leaking raw provider/runtime failures into external chat channels",
-      "keep `/model` changes queued behind busy runs",
-      "preserve rewritten stream snapshots in webchat"
+      "修复聊天错误回复信息泄露问题",
+      "修复会话模型切换排队问题",
+      "修复Web UI流式响应对齐问题"
     ]
   }
 },
@@ -132,20 +132,20 @@ const changelogData = ref([
   "latest": false,
   "changes": {
     "features": [
-      "add an explicit default-off ACPX plugin-tools MCP bridge config",
-      "add a configurable idle-stream timeout for embedded runner requests",
-      "turn tasks into a real shared background-run control plane",
-      "add QQ Bot as a bundled channel plugin"
+      "ACP插件MCP桥接配置支持",
+      "可配置的空闲流超时设置",
+      "背景任务控制平面重构",
+      "QQ Bot作为捆绑通道插件"
     ],
     "improvements": [
-      "⚠️ remove the duplicated `nodes.run` shell wrapper from the CLI",
-      "⚠️ deprecate the legacy provider compat subpaths",
-      "⚠️ built-in dangerous-code `critical` findings now fail closed"
+      "⚠️ 移除重复的节点执行shell包装器",
+      "⚠️ 弃用遗留提供商兼容性子路径",
+      "⚠️ 技能安装安全检查默认关闭"
     ],
     "bugfixes": [
-      "stop retry-driven duplicate replies when draft-finalization edits fail",
-      "normalize raw bundled MCP tool schemas",
-      "replace ACP's dangerous-tool name override with semantic approval classes"
+      "修复Slack重试重复回复问题",
+      "修复OpenAI Responses工具模式规范化",
+      "修复ACP安全工具名称覆盖问题"
     ]
   }
 }
