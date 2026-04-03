@@ -85,144 +85,70 @@ const changelogData = ref([
   "latest": true,
   "changes": {
     "features": [
-      "恢复核心任务流(Task Flow)底层架构，支持托管与镜像同步模式",
-      "Android助手集成Google Assistant应用操作元数据",
-      "飞书文档评论事件流，支持评论线程上下文解析",
-      "Matrix插件支持规范化的提及元数据",
-      "优化代理压缩模型的一致性解析",
-      "WhatsApp反应功能增加指导级别"
+      "restore the core Task Flow substrate with managed-vs-mirrored sync modes",
+      "add assistant-role entrypoints plus Google Assistant App Actions metadata",
+      "add a dedicated Drive comment-event flow with comment-thread context resolution",
+      "emit spec-compliant `m.mentions` metadata across text sends",
+      "resolve `agents.defaults.compaction.model` consistently",
+      "add `reactionLevel` guidance for agent reactions"
     ],
     "improvements": [
-      "⚠️ xAI插件搜索设置迁移到插件自有配置路径",
-      "⚠️ Web Fetch插件Firecrawl配置迁移到插件自有路径"
+      "⚠️ move `x_search` settings from the legacy core `tools.web.x_search.*` path",
+      "⚠️ move Firecrawl `web_fetch` config from the legacy core path"
     ],
     "bugfixes": [
-      "集中化请求认证、代理、TLS和头部处理策略",
-      "恢复空配对设备令牌映射的遗留角色回退",
-      "代理子代理调用权限优化",
-      "执行审批配置验证和清理",
-      "修复Slack Markdown格式化指导",
-      "修复WhatsApp连接时的在线状态处理"
+      "centralize request auth, proxy, TLS, and header shaping",
+      "restore legacy-role fallback for empty paired-device token maps",
+      "pin admin-only subagent gateway calls to `operator.admin`",
+      "strip invalid `security`, `ask`, and `askFallback` values",
+      "add built-in Slack mrkdwn guidance in inbound context",
+      "send `unavailable` presence on connect in self-chat mode"
     ]
   }
 },
   {
-  "version": "2026.3.9",
-  "date": "2026-03-19",
+  "version": "2026.4.1",
+  "date": "2026-04-01",
   "type": "稳定版",
   "latest": false,
   "changes": {
     "features": [
-      "自动化更新日志同步功能",
-      "增强系统监控和告警机制",
-      "优化用户界面交互体验"
+      "stop ambient core helper and setup paths from loading non-selected bundled plugins",
+      "keep room-level `account` scoping and inherited room overrides",
+      "prefer explicit QR bootstrap auth over earlier Tailscale auth classification"
     ],
-    "improvements": [
-      "提升系统稳定性和性能",
-      "改进错误处理和恢复机制",
-      "增强安全性和权限控制"
-    ],
+    "improvements": [],
     "bugfixes": [
-      "修复已知的兼容性问题",
-      "解决部分API调用异常"
+      "stop leaking raw provider/runtime failures into external chat channels",
+      "keep `/model` changes queued behind busy runs",
+      "preserve rewritten stream snapshots in webchat"
     ]
   }
 },
   {
-    version: "2026.3.8",
-    date: "2026-03-19",
-    type: "稳定版",
-    latest: true,
-    changes: {
-      features: [
-        "新增飞书文档集成功能，支持文档创建、编辑和权限管理",
-        "增强企业微信支持，提供通讯录查询和文档管理能力",
-        "优化定时任务系统，支持更灵活的调度配置",
-        "改进会话管理，提升多会话并发处理能力"
-      ],
-      improvements: [
-        "优化TTS语音合成功能，支持多通道音频输出",
-        "增强浏览器自动化能力，提升页面操作稳定性",
-        "改进文件管理系统，支持更大文件传输",
-        "优化内存管理，降低资源占用"
-      ],
-      bugfixes: [
-        "修复3月18日服务中断问题，增强系统稳定性",
-        "解决长时间会话状态异常问题",
-        "修复部分插件加载失败的问题"
-      ]
-    }
-  },
-  {
-    version: "2026.3.7",
-    date: "2026-03-15",
-    type: "稳定版",
-    latest: false,
-    changes: {
-      features: [
-        "新增GitHub集成功能，支持代码仓库管理",
-        "实现Docker容器化部署优化",
-        "添加实时系统监控和状态展示",
-        "支持多模型切换和fallback机制"
-      ],
-      improvements: [
-        "优化前端界面响应速度",
-        "改进错误处理和异常恢复机制",
-        "增强安全审计和权限控制"
-      ],
-      bugfixes: [
-        "修复内存泄漏问题",
-        "解决部分API调用超时问题",
-        "修复定时任务执行异常"
-      ]
-    }
-  },
-  {
-    version: "2026.3.6",
-    date: "2026-03-10",
-    type: "稳定版",
-    latest: false,
-    changes: {
-      features: [
-        "实现Vue3前端演示应用",
-        "添加TodoList任务管理模块",
-        "支持实时服务器状态监控",
-        "新增架构设计和部署文档"
-      ],
-      improvements: [
-        "优化用户界面交互体验",
-        "改进组件复用和模块化设计",
-        "增强移动端适配"
-      ],
-      bugfixes: [
-        "修复路由导航问题",
-        "解决样式兼容性问题"
-      ]
-    }
-  },
-  {
-    version: "2026.3.5",
-    date: "2026-03-05",
-    type: "稳定版",
-    latest: false,
-    changes: {
-      features: [
-        "完成基础AI助手功能",
-        "实现多平台消息集成",
-        "添加文件操作和代码执行能力",
-        "支持定时任务和自动化工作流"
-      ],
-      improvements: [
-        "优化自然语言理解能力",
-        "改进工具调用准确性",
-        "增强错误处理和用户反馈"
-      ],
-      bugfixes: [
-        "修复初始化和启动问题",
-        "解决权限认证异常"
-      ]
-    }
+  "version": "2026.3.31",
+  "date": "2026-03-31",
+  "type": "稳定版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "add an explicit default-off ACPX plugin-tools MCP bridge config",
+      "add a configurable idle-stream timeout for embedded runner requests",
+      "turn tasks into a real shared background-run control plane",
+      "add QQ Bot as a bundled channel plugin"
+    ],
+    "improvements": [
+      "⚠️ remove the duplicated `nodes.run` shell wrapper from the CLI",
+      "⚠️ deprecate the legacy provider compat subpaths",
+      "⚠️ built-in dangerous-code `critical` findings now fail closed"
+    ],
+    "bugfixes": [
+      "stop retry-driven duplicate replies when draft-finalization edits fail",
+      "normalize raw bundled MCP tool schemas",
+      "replace ACP's dangerous-tool name override with semantic approval classes"
+    ]
   }
+}
 ])
 
 // 分类图标映射
@@ -249,18 +175,19 @@ const getCategoryName = (category) => {
 <style scoped>
 .changelog-view {
   min-height: 100vh;
-  background: var(--color-bg-secondary);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 2rem 0;
 }
 
 .changelog-container {
   max-width: 900px;
   margin: 0 auto;
-  padding: var(--space-6);
+  padding: 0 1.5rem;
 }
 
 /* Header */
 .changelog-header {
-  margin-bottom: var(--space-8);
+  margin-bottom: 3rem;
   text-align: center;
 }
 
@@ -273,40 +200,48 @@ const getCategoryName = (category) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-2);
+  gap: 0.75rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .title-icon {
-  font-size: var(--text-2xl);
+  font-size: 2rem;
+  -webkit-text-fill-color: initial;
 }
 
 .page-description {
-  font-size: var(--text-lg);
-  color: var(--color-text-secondary);
-  line-height: 1.5;
+  font-size: 1.125rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin-top: 0.5rem;
 }
 
 /* Changelog Content */
 .changelog-content {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
 .changelog-list {
-  padding: var(--space-6);
+  padding: 2rem;
 }
 
 .changelog-item {
   position: relative;
-  padding-bottom: var(--space-8);
-  margin-bottom: var(--space-8);
-  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 2.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 2px solid #f1f5f9;
+  transition: all 0.3s ease;
 }
 
 .changelog-item:last-child {
@@ -314,17 +249,27 @@ const getCategoryName = (category) => {
   margin-bottom: 0;
 }
 
+.changelog-item:hover {
+  transform: translateY(-2px);
+}
+
 .changelog-item.latest {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
-  margin: calc(-1 * var(--space-6));
-  padding: var(--space-6);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
+  margin: -2rem;
+  padding: 2rem;
+  border-radius: 1.5rem 1.5rem 0 0;
+  border-bottom: 2px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.changelog-item.latest:hover {
+  transform: none;
 }
 
 /* Version Header */
 .version-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: 1.5rem;
+  position: relative;
 }
 
 .version-info {
@@ -332,84 +277,120 @@ const getCategoryName = (category) => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: 1rem;
 }
 
 .version-number {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 0.75rem;
   margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #1e293b;
 }
 
 .version-tag {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  font-family: 'JetBrains Mono', monospace;
+  background: #f8fafc;
+  color: #1e293b;
+  padding: 0.375rem 1rem;
+  border-radius: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-weight: 600;
-  border: 1px solid var(--color-border);
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.version-tag:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .version-tag.latest-tag {
   background: linear-gradient(135deg, #3b82f6, #10b981);
   color: white;
   border-color: transparent;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
 }
 
 .latest-badge {
-  background: var(--color-success);
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  box-shadow: 0 2px 4px 0 rgba(16, 185, 129, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .version-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 0.75rem;
 }
 
 .release-date {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 500;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
 }
 
 .release-type {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .release-type.稳定版 {
-  background: var(--color-success-light);
-  color: var(--color-success);
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #166534;
+  border: 1px solid #86efac;
 }
 
 .release-type.测试版 {
-  background: var(--color-warning-light);
-  color: var(--color-warning);
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.release-type.重大更新 {
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  color: #991b1b;
+  border: 1px solid #f87171;
 }
 
 /* Changes Content */
 .changes-content {
-  padding-left: var(--space-4);
+  padding-left: 1rem;
+  border-left: 3px solid #e2e8f0;
+  margin-left: 0.5rem;
 }
 
 .change-category {
-  margin-bottom: var(--space-6);
+  margin-bottom: 1.5rem;
+  background: #fafafa;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #f1f5f9;
 }
 
 .change-category:last-child {
@@ -419,15 +400,21 @@ const getCategoryName = (category) => {
 .category-title {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-3);
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .category-icon {
-  font-size: var(--text-base);
+  font-size: 1.25rem;
+  background: white;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .changes-list {
@@ -438,97 +425,150 @@ const getCategoryName = (category) => {
 
 .change-item {
   position: relative;
-  padding-left: var(--space-4);
-  margin-bottom: var(--space-2);
-  color: var(--color-text-secondary);
-  line-height: 1.5;
+  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 .change-item::before {
   content: '';
   position: absolute;
   left: 0;
-  top: 0.5em;
-  width: 4px;
-  height: 4px;
-  background: var(--color-text-muted);
+  top: 0.625rem;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #3b82f6, #10b981);
   border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .change-item:last-child {
   margin-bottom: 0;
 }
 
+.change-item:hover {
+  color: #1e293b;
+}
+
 /* Footer */
 .changelog-footer {
-  padding: var(--space-6);
-  background: var(--color-bg-secondary);
-  border-top: 1px solid var(--color-border);
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-top: 1px solid #e2e8f0;
   text-align: center;
 }
 
 .footer-text {
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
+  color: #64748b;
+  font-size: 0.875rem;
   margin: 0;
+  line-height: 1.5;
 }
 
 .external-link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--color-accent);
+  gap: 0.25rem;
+  color: #3b82f6;
   text-decoration: none;
-  font-weight: 500;
-  transition: color var(--transition-fast);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: rgba(59, 130, 246, 0.1);
 }
 
 .external-link:hover {
-  color: var(--color-accent-hover);
-  text-decoration: underline;
+  color: #1d4ed8;
+  text-decoration: none;
+  background: rgba(59, 130, 246, 0.2);
+  transform: translateY(-1px);
 }
 
 .external-icon {
-  opacity: 0.7;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+.external-link:hover .external-icon {
+  transform: translate(1px, -1px);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .changelog-container {
-    padding: var(--space-4);
+    padding: 0 1rem;
   }
 
   .page-title {
-    font-size: var(--text-2xl);
+    font-size: 2rem;
   }
 
   .version-info {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-2);
+    gap: 0.5rem;
   }
 
   .version-number {
-    font-size: var(--text-xl);
+    font-size: 1.5rem;
   }
 
   .changes-content {
-    padding-left: 0;
+    padding-left: 0.75rem;
+    margin-left: 0.25rem;
+  }
+
+  .changelog-list {
+    padding: 1.5rem;
+  }
+
+  .changelog-item.latest {
+    margin: -1.5rem;
+    padding: 1.5rem;
   }
 }
 
 @media (max-width: 480px) {
+  .changelog-view {
+    padding: 1rem 0;
+  }
+
   .changelog-list {
-    padding: var(--space-4);
+    padding: 1rem;
   }
 
   .changelog-item.latest {
-    margin: calc(-1 * var(--space-4));
-    padding: var(--space-4);
+    margin: -1rem;
+    padding: 1rem;
   }
 
   .changelog-footer {
-    padding: var(--space-4);
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .change-category {
+    padding: 0.75rem;
+  }
+}
+
+/* Animation for latest version */
+.changelog-item.latest .version-tag {
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
+  }
+  to {
+    box-shadow: 0 4px 20px 0 rgba(59, 130, 246, 0.6);
   }
 }
 </style>
