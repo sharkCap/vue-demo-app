@@ -82,7 +82,7 @@
                           <span class="category-icon">{{ getCategoryIcon(category) }}</span>
                         </span>
                         <span class="category-name">{{ getCategoryName(category) }}</span>
-                        <span class="category-count">{{ changes.length }}</span>
+                        <span class="category-count">{{ changes ? changes.length : 0 }}</span>
                       </h3>
                     </div>
                     <ul class="changes-list">
