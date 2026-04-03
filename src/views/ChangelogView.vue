@@ -85,57 +85,6 @@ const changelogData = ref([
   "latest": true,
   "changes": {
     "features": [
-      "restore the core Task Flow substrate with managed-vs-mirrored sync modes",
-      "add assistant-role entrypoints plus Google Assistant App Actions metadata",
-      "add a dedicated Drive comment-event flow with comment-thread context resolution",
-      "emit spec-compliant `m.mentions` metadata across text sends",
-      "resolve `agents.defaults.compaction.model` consistently",
-      "add `reactionLevel` guidance for agent reactions"
-    ],
-    "improvements": [
-      "⚠️ move `x_search` settings from the legacy core `tools.web.x_search.*` path",
-      "⚠️ move Firecrawl `web_fetch` config from the legacy core path"
-    ],
-    "bugfixes": [
-      "centralize request auth, proxy, TLS, and header shaping",
-      "restore legacy-role fallback for empty paired-device token maps",
-      "pin admin-only subagent gateway calls to `operator.admin`",
-      "strip invalid `security`, `ask`, and `askFallback` values",
-      "add built-in Slack mrkdwn guidance in inbound context",
-      "send `unavailable` presence on connect in self-chat mode"
-    ]
-  }
-},
-  {
-  "version": "2026.4.2",
-  "date": "2026-04-03",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "OpenClaw 2026.4.2 版本更新",
-      "包含多项功能改进和问题修复",
-      "提升系统稳定性和用户体验"
-    ],
-    "improvements": [
-      "系统性能优化",
-      "安全性增强",
-      "错误处理改进"
-    ],
-    "bugfixes": [
-      "修复已知兼容性问题",
-      "解决部分API调用异常",
-      "优化内存使用效率"
-    ]
-  }
-},
-  {
-  "version": "2026.4.2",
-  "date": "2026-04-03",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
       "自动化更新日志同步功能",
       "增强系统监控和告警机制",
       "优化用户界面交互体验"
