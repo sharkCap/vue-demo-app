@@ -21,6 +21,25 @@
         </div>
       </header>
 
+      <!-- Version Navigation -->
+      <div class="version-navigation animate-slide-up" style="animation-delay: 200ms">
+        <div class="nav-container">
+          <h3 class="nav-title">快速导航</h3>
+          <div class="nav-list">
+            <button 
+              v-for="release in changelogData" 
+              :key="release.version"
+              class="nav-item"
+              :class="{ 'active': activeVersion === release.version, 'latest': release.latest }"
+              @click="scrollToVersion(release.version)"
+            >
+              <span class="nav-version">v{{ release.version }}</span>
+              <span v-if="release.latest" class="nav-latest-badge">最新</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Changelog Content -->
       <main class="changelog-content animate-scale-in">
         <div class="timeline-container">
@@ -30,6 +49,7 @@
             <div 
               v-for="(release, index) in changelogData" 
               :key="release.version"
+              :id="`version-${release.version}`"
               class="changelog-item"
               :class="{ 'latest': release.latest, 'animate-fade-in': true }"
               :style="{ animationDelay: `${index * 100}ms` }"
@@ -126,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // 更新日志数据
 const changelogData = ref([
@@ -1187,6 +1207,53 @@ const formatDate = (dateString) => {
     day: 'numeric'
   })
 }
+
+// 活跃版本状态
+const activeVersion = ref('')
+
+// 滚动到指定版本
+const scrollToVersion = (version) => {
+  const element = document.getElementById(`version-${version}`)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    activeVersion.value = version
+  }
+}
+
+// 监听滚动，更新当前活跃版本
+const updateActiveVersion = () => {
+  const versions = changelogData.value.map(v => v.version)
+  const scrollPosition = window.scrollY + 100
+  
+  for (const version of versions) {
+    const element = document.getElementById(`version-${version}`)
+    if (element) {
+      const elementTop = element.offsetTop
+      const elementBottom = elementTop + element.offsetHeight
+      
+      if (scrollPosition >= elementTop && scrollPosition <= elementBottom) {
+        activeVersion.value = version
+        break
+      }
+    }
+  }
+}
+
+onMounted(() => {
+  // 设置默认活跃版本为最新版
+  if (changelogData.value.length > 0) {
+    const latest = changelogData.value.find(v => v.latest)
+    activeVersion.value = latest ? latest.version : changelogData.value[0].version
+  }
+  
+  // 监听滚动事件
+  window.addEventListener('scroll', updateActiveVersion)
+})
+
+// 在组件卸载时移除事件监听
+onUnmounted(() => {
+  window.removeEventListener('scroll', updateActiveVersion)
+})
 </script>
 
 <style scoped>
@@ -1893,4 +1960,142 @@ const formatDate = (dateString) => {
     font-size: var(--text-xl);
   }
 }
+
+
+  /* 版本导航样式 */
+  .version-navigation {
+    background: linear-gradient(135deg, rgba(139, 69, 19, 0.05) 0%, rgba(160, 82, 45, 0.05) 100%);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin: var(--space-6) 0;
+    border: 1px solid rgba(139, 69, 19, 0.1);
+  }
+
+  .nav-container {
+    max-width: 100%;
+  }
+
+  .nav-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .nav-title::before {
+    content: "🧭";
+    font-size: var(--text-xl);
+  }
+
+  .nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: var(--space-2);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+  }
+
+  .nav-item:hover {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .nav-item.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md);
+  }
+
+  .nav-item.latest {
+    border-color: var(--color-accent);
+  }
+
+  .nav-item.latest:hover {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+  }
+
+  .nav-item.latest.active {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  .nav-version {
+    font-family: var(--font-mono);
+  }
+
+  .nav-latest-badge {
+    background: var(--color-accent);
+    color: white;
+    font-size: var(--text-xs);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+  }
+
+  .nav-item.active .nav-latest-badge {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* 响应式设计 */
+  @media (max-width: 768px) {
+    .version-navigation {
+      padding: var(--space-3);
+      margin: var(--space-4) 0;
+    }
+
+    .nav-title {
+      font-size: var(--text-base);
+    }
+
+    .nav-list {
+      max-height: 150px;
+      gap: var(--space-1);
+    }
+
+    .nav-item {
+      padding: var(--space-1) var(--space-2);
+      font-size: var(--text-xs);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .nav-list {
+      max-height: 120px;
+    }
+
+    .nav-item {
+      padding: var(--space-1) var(--space-2);
+      font-size: var(--text-xs);
+    }
+
+    .nav-latest-badge {
+      font-size: 10px;
+      padding: 1px 4px;
+    }
+  }
 </style>
