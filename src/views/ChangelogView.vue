@@ -70,33 +70,33 @@
 
                 <!-- Changes Content -->
                 <div class="changes-content">
-                  <div 
-                    v-for="(changes, category) in release.changes" 
-                    :key="category" 
-                    class="change-category"
-                    v-if="changes && changes.length > 0"
-                  >
-                    <div class="category-header">
-                      <h3 class="category-title">
-                        <span class="category-icon-wrapper">
-                          <span class="category-icon">{{ getCategoryIcon(category) }}</span>
-                        </span>
-                        <span class="category-name">{{ getCategoryName(category) }}</span>
-                        <span class="category-count">{{ changes ? changes.length : 0 }}</span>
-                      </h3>
+                  <template v-for="(changes, category) in release.changes" :key="category">
+                    <div 
+                      v-if="changes && Array.isArray(changes) && changes.length > 0"
+                      class="change-category"
+                    >
+                      <div class="category-header">
+                        <h3 class="category-title">
+                          <span class="category-icon-wrapper">
+                            <span class="category-icon">{{ getCategoryIcon(category) }}</span>
+                          </span>
+                          <span class="category-name">{{ getCategoryName(category) }}</span>
+                          <span class="category-count">{{ changes.length }}</span>
+                        </h3>
+                      </div>
+                      <ul class="changes-list">
+                        <li 
+                          v-for="(change, changeIndex) in changes" 
+                          :key="changeIndex" 
+                          class="change-item"
+                          :style="{ animationDelay: `${changeIndex * 50}ms` }"
+                        >
+                          <div class="change-bullet"></div>
+                          <span class="change-text">{{ change }}</span>
+                        </li>
+                      </ul>
                     </div>
-                    <ul class="changes-list">
-                      <li 
-                        v-for="(change, changeIndex) in changes" 
-                        :key="changeIndex" 
-                        class="change-item"
-                        :style="{ animationDelay: `${changeIndex * 50}ms` }"
-                      >
-                        <div class="change-bullet"></div>
-                        <span class="change-text">{{ change }}</span>
-                      </li>
-                    </ul>
-                  </div>
+                  </template>
                 </div>
               </div>
             </div>
