@@ -21,27 +21,43 @@
         </div>
       </header>
 
-      <!-- Version Navigation -->
-      <div class="version-navigation animate-slide-up" style="animation-delay: 200ms">
-        <div class="nav-container">
-          <h3 class="nav-title">快速导航</h3>
-          <div class="nav-list">
-            <button 
-              v-for="release in changelogData" 
-              :key="release.version"
-              class="nav-item"
-              :class="{ 'active': activeVersion === release.version, 'latest': release.latest }"
-              @click="scrollToVersion(release.version)"
-            >
-              <span class="nav-version">v{{ release.version }}</span>
-              <span v-if="release.latest" class="nav-latest-badge">最新</span>
-            </button>
+      <!-- Main Content Layout with Sidebar -->
+      <div class="changelog-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="changelog-sidebar" :class="{ 'sidebar-hidden': !showSidebar }">
+          <div class="sidebar-container">
+            <div class="sidebar-header">
+              <h3 class="sidebar-title">版本目录</h3>
+              <button class="sidebar-toggle" @click="toggleSidebar" :title="showSidebar ? '隐藏侧边栏' : '显示侧边栏'">
+                <span class="toggle-icon">{{ showSidebar ? '←' : '→' }}</span>
+              </button>
+            </div>
+            <div class="sidebar-content">
+              <ul class="version-list">
+                <li 
+                  v-for="release in changelogData" 
+                  :key="release.version"
+                  class="version-item"
+                  :class="{ 'active': activeVersion === release.version }"
+                >
+                  <a @click.prevent="scrollToVersion(release.version)" href="#" class="version-link">
+                    <span class="version-number">v{{ release.version }}</span>
+                    <span v-if="release.latest" class="latest-badge-sidebar">最新</span>
+                    <span class="version-date">{{ formatDate(release.date) }}</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </div>
+        </aside>
 
-      <!-- Changelog Content -->
-      <main class="changelog-content animate-scale-in">
+        <!-- Back to Top Button -->
+        <button class="back-to-top" :class="{ 'show': showBackToTop }" @click="scrollToTop" title="回到顶部">
+          <span class="back-to-top-icon">↑</span>
+        </button>
+
+        <!-- Main Content -->
+        <main class="changelog-content animate-scale-in" :class="{ 'content-expanded': !showSidebar }">
         <div class="timeline-container">
           <div class="timeline-line"></div>
           
@@ -143,18 +159,419 @@
       </main>
     </div>
   </div>
+</div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+
+// 响应式状态管理
+const enableAutoHide = ref(true);
+const showNavigation = ref(true);
+const showSidebar = ref(true);
+const showBackToTop = ref(false);
+const activeVersion = ref('');
+
+// 自动隐藏逻辑
+let lastScrollTop = 0;
+
+const handleScroll = () => {
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  
+  // 控制回到顶部按钮显示
+  showBackToTop.value = scrollTop > 300;
+  
+  // 控制导航栏自动隐藏
+  if (enableAutoHide.value) {
+    // 向下滚动时隐藏，向上滚动时显示
+    const currentScrollTop = scrollTop;
+    
+    if (currentScrollTop > lastScrollTop && currentScrollTop > 100) {
+      // 向下滚动
+      showNavigation.value = false;
+    } else if (currentScrollTop < lastScrollTop || currentScrollTop <= 50) {
+      // 向上滚动或滚动到顶部附近
+      showNavigation.value = true;
+    }
+    
+    lastScrollTop = currentScrollTop;
+  }
+  
+  // 检测当前活跃版本
+  const versions = changelogData.value;
+  for (let i = versions.length - 1; i >= 0; i--) {
+    const element = document.getElementById(`version-${versions[i].version}`);
+    if (element && element.offsetTop <= scrollTop + 200) {
+      activeVersion.value = versions[i].version;
+      break;
+    }
+  }
+};
+
+// 切换自动隐藏
+const toggleAutoHide = () => {
+  enableAutoHide.value = !enableAutoHide.value;
+  if (!enableAutoHide.value) {
+    showNavigation.value = true;
+  }
+};
+
+// 切换侧边栏显示
+const toggleSidebar = () => {
+  showSidebar.value = !showSidebar.value;
+};
+
+// 滚动到指定版本
+const scrollToVersion = (version) => {
+  const element = document.getElementById(`version-${version}`);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+};
+
+// 回到顶部
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 // 更新日志数据
 const changelogData = ref([
   {
+  "version": "2026.4.14",
+  "date": "2026-04-14",
+  "type": "稳定版",
+  "latest": true,
+  "changes": {
+    "features": [],
+    "improvements": [],
+    "bugfixes": []
+  }
+},
+  {
+  "version": "2026.4.14-beta.1",
+  "date": "2026-04-14",
+  "type": "测试版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "Telegram/forum topics: surface human topic names in agent context, prompt metadata, and 插件 hook metadata by learning names from Telegram forum service messages. (#65973) Thanks @ptahdunbar."
+    ],
+    "improvements": [],
+    "bugfixes": [
+      "界面/chat: replace marked.js with markdown-it so maliciously crafted markdown can no longer freeze the Control 界面 via ReDoS. (#46707) Thanks @zhangfnf.",
+      "Auto-reply/send policy: keep `sendPolicy: \"deny\"` from blocking inbound message processing, so the agent still runs its turn while all outbound delivery is suppressed for observer-style setups. (#65461, #53328) Thanks @omarshahine.",
+      "BlueBubbles: lazy-refresh the Private API server-info cache on send when reply threading or message effects are requested but status is unknown, so sends no longer silently degrade to plain messages when the 10-minute cache expires. (#65447, #43764) Thanks @omarshahine.",
+      "Heartbeat/安全: force owner downgrade for untrusted `hook:wake` system events [AI-assisted]. (#66031) Thanks @pgondhi987.",
+      "Browser/安全: enforce SSRF policy on snapshot, screenshot, and tab routes [AI]. (#66040) Thanks @pgondhi987.",
+      "Microsoft Teams/安全: enforce sender allowlist checks on SSO signin invokes [AI]. (#66033) Thanks @pgondhi987.",
+      "Config/安全: redact `sourceConfig` and `runtimeConfig` alias fields in `redactConfigSnapshot` [AI]. (#66030) Thanks @pgondhi987.",
+      "Agents/context engines: run opt-in turn maintenance as idle-aware background work so the next foreground turn no longer waits on proactive maintenance. (#65233) Thanks @100yenadmin.",
+      "插件s/status: report the registered context-engine IDs in `插件s inspect` instead of the owning 插件 ID, so non-matching engine IDs and multi-engine 插件s are classified correctly. (#58766) Thanks @zh界面sDEV.",
+      "Context engines: reject resolved 插件 engines whose reported `info.id` does not match their registered slot id, so malformed engines fail fast before id-based runtime branches can misbehave. (#63222) Thanks @fuller-stack-dev.",
+      "WhatsApp: patch installed Baileys media encryption writes during OpenClaw postinstall so the default npm/install.sh delivery path waits for encrypted media files to finish flushing before readback, avoiding transient `ENOENT` crashes on image sends. (#65896) Thanks @frankekn.",
+      "Gateway/更新: unify service entrypoint resolution around the canonical bundled gateway entrypoint so 更新, reinstall, and doctor repair stop drifting between stale `dist/entry.js` and current `dist/index.js` paths. (#65984) Thanks @mbelinky.",
+      "Heartbeat/Telegram topics: keep isolated heartbeat replies on the bound forum topic when `target=last`, instead of dropping them into the group root chat. (#66035) Thanks @mbelinky.",
+      "Browser/CDP: let managed local Chrome readiness, status probes, and managed loopback CDP control bypass browser SSRF policy for their own loopback control plane, so OpenClaw no longer misclassifies a healthy child browser as \"not reachable after start\". (#65695, #66043) Thanks @mbelinky.",
+      "Gateway/sessions: stop heartbeat, cron-event, and exec-event turns from overwriting shared-session routing and origin metadata, preventing synthetic `heartbeat` targets from poisoning later cron or user delivery. (#66073, #63733, #35300) Thanks @mbelinky.",
+      "Browser/CDP: let local attach-only `manual-cdp` profiles reuse the local loopback CDP control plane under strict default policy and remote-class probe timeouts, so tabs/snapshot stop falsely reporting a live local browser session as not running. (#65611, #66080) Thanks @mbelinky.",
+      "Cron/scheduler: stop inventing short retries when cron next-run calculation returns no valid future slot, and keep a maintenance wake armed so enabled unscheduled jobs recover without entering a refire loop. (#66019, #66083) Thanks @mbelinky.",
+      "Cron/scheduler: preserve the active error-backoff floor when maintenance repair recomputes a missing cron next-run, so recurring errored jobs do not resume early after a transient next-run resolution failure. (#66019, #66083, #66113) Thanks @mbelinky.",
+      "Outbound/delivery-queue: persist the originating outbound `session` context on queued delivery entries and replay it during recovery, so write-ahead-queued sends keep their original outbound media policy context after restart instead of evaluating against a missing session. (#66025) Thanks @eleqtrizit.",
+      "Auto-reply/queue: split collect-mode followup drains into contiguous groups by per-message authorization context (sender id, owner status, exec/bash-elevated overrides), so queued items from different senders or exec configs no longer execute under the last queued run's owner-only and exec-approval context. (#66024) Thanks @eleqtrizit.",
+      "Dreaming/memory-core: req界面re a live queued Dreaming cron event before the heartbeat hook runs the sweep, so managed Dreaming no longer replays on later heartbeats after the scheduled run was already consumed. (#66139) Thanks @mbelinky.",
+      "Control 界面/Dreaming: stop Imported Insights and Memory Palace from calling optional `memory-wiki` gateway methods when the 插件 is off, and refresh config before wiki reloads so the Dreaming tab stops showing misleading unknown-method failures. (#66140) Thanks @mbelinky.",
+      "Agents/tools: only mark streamed unknown-tool retries as counted when a streamed message actually classifies an unavailable tool, and keep incomplete streamed tool names from resetting the retry streak before the final assistant message arrives. (#66145) Thanks @dutifulbob.",
+      "Memory/active-memory: move recalled memory onto the hidden untrusted prompt-pre修复 path instead of system prompt injection, label the visible Active Memory status line fields, and include the resolved recall provider/model in gateway de问题 logs so trace/de问题 output matches what the model actually saw. (#66144) Thanks @Takhoffman.",
+      "Memory/QMD: stop treating legacy lowercase `memory.md` as a second default root collection, so QMD recall no longer searches phantom `memory-alt-*` collections and b界面ltin/QMD root-memory fallback stays aligned. (#66141) Thanks @mbelinky.",
+      "Agents/OpenAI: map `minimal` thinking to OpenAI's 支持ed `low` reasoning effort for GPT-5.4 requests, so embedded runs stop failing request validation. Thanks @steipete.",
+      "Voice-call/media-stream: resolve the source IP from trusted forwarding headers for per-IP pending-connection limits when `webhook安全.trustForwardingHeaders` and `trustedProxyIPs` are configured, and reserve `maxConnections` capacity for in-flight WebSocket upgrades so concurrent handshakes can no longer momentarily exceed the operator-set cap. (#66027) Thanks @eleqtrizit.",
+      "Feishu/allowlist: canonicalize allowlist entries by explicit `user`/`chat` kind, strip repeated `feishu:`/`lark:` provider pre修复es, and stop folding opaque Feishu IDs to lowercase, so allowlist matching no longer crosses user/chat namespaces or widens to case-insensitive ID matches the operator did not intend. (#66021) Thanks @eleqtrizit.",
+      "TTS/reply media: persist OpenClaw temp voice outputs into managed outbound media and allow them through reply-media normalization, so voice-note replies stop silently dropping. (#63511) Thanks @jetd1.",
+      "Agents/tools: treat Windows drive-letter paths (`C:\\\\...`) as absolute when resolving sandbox and read-tool paths so workspace root is not prepended under POSIX path rules. (#54039) Thanks @ly85206559 and @vincentkoc.",
+      "Agents/OpenAI: recover embedded GPT-style runs when reasoning-only or empty turns need bounded continuation, with replay-safe retry gating and incomplete-turn fallback when no visible answer arrives. (#66167) thanks @jalehman",
+      "Outbound/relay-status: suppress internal relay-status placeholder payloads (`No channel reply.`, `Replied in-thread.`, `Replied in #...`, wiki-更新 status variants ending in `No channel reply.`) before channel delivery so internal housekeeping text does not leak to users.",
+      "Slack/doctor: 添加 a dedicated doctor-contract sidecar so config warmup paths such as `openclaw cron` no longer fall back to Slack's broader contract surface, which could trigger Slack-related config-read crashes on affected setups. (#63192) Thanks @shhtheonlyperson.",
+      "Hooks/session-memory: pass the resolved agent workspace into gateway `/new` and `/reset` session-memory hooks so reset snapshots stay scoped to the right agent workspace instead of leaking into the default workspace. (#64735) Thanks @suboss87 and @vincentkoc."
+    ]
+  }
+},
+  {
+  "version": "2026.4.12",
+  "date": "2026-04-13",
+  "type": "稳定版",
+  "latest": false,
+  "changes": {
+    "features": [],
+    "improvements": [],
+    "bugfixes": []
+  }
+},
+  {
+  "version": "2026.4.12-beta.1",
+  "date": "2026-04-12",
+  "type": "测试版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "插件s/loading: narrow CLI, provider, and channel activation to manifest-declared needs, preserve explicit scope and trust boundaries, and centralize manifest-owner policy so startup, command discovery, and runtime activation avoid loading unrelated 插件 runtime. (#65120, #65259, #65298, #65429, #65459) Thanks @vincentkoc.",
+      "Memory/active-memory: default QMD recall to search and surface better search-path telemetry so memory-backed recall works more predictably out of the box. (#65068) Thanks @Takhoffman.",
+      "Docs/providers: expand bundled provider docs with richer capability, env-var, and setup g界面dance across provider pages.",
+      "Docs/memory-wiki: 添加 the recommended QMD + bridge-mode hybrid recipe plus zero-artifact troubleshooting g界面dance for `memory-wiki` bridge setups. (#63165) Thanks @sercada and @vincentkoc."
+    ],
+    "improvements": [],
+    "bugfixes": [
+      "CLI/更新: respawn tracked 插件 refresh from the 更新d entrypoint after package self-更新s so `openclaw 更新` stops failing on stale hashed `dist/install.runtime-*.js` chunk imports. (#65471)",
+      "Memory/active-memory: keep recall runs on the resolved channel when wrappers like `mx-claw` are enabled, 改进 lexical fallback ranking, and keep lexical boosts out of hybrid search so recall finds the right memories more consistently. (#65049, #65395) Thanks @Takhoffman.",
+      "Dreaming: consume managed heartbeat events exactly once, stage light-sleep confidence from all recorded short-term signals, wake scheduled jobs immediately, raise dreaming-only promotion enough to cross the durable-memory gate, and stop dreaming from re-ingesting its own narrative transcripts.",
+      "Dreaming/narrative: harden transient narrative cleanup by retrying timed-out deletes, scrubbing stale dreaming session artifacts through the lock-aware session-store path, and isolating transient narrative session keys per workspace. (#65320, #61674)",
+      "Memory/wiki: preserve Unicode letters, digits, and combining marks in wiki slugs and contradiction clustering, and cap Unicode filename segments to safe byte lengths so non-ASCII titles stop collapsing or overflowing path limits. (#64742) Thanks @zhouhe-xydt.",
+      "Memory/short-term recall: allow nested daily notes under `memory/**/YYYY-MM-DD.md` to feed short-term recall, while still excluding generated dream reports under `memory/dreaming/**` so dreaming does not promote its own output. (#64682) Thanks @SARAMALI15792.",
+      "界面/WebChat: hide synthetic transcript-repair tool results from chat history reloads so internal recovery markers do not leak into visible chat after reconnects. (#65247) Thanks @wangwllu.",
+      "WhatsApp/outbound: fall back to the first `mediaUrls` entry when `mediaUrl` is empty so gateway media sends stop silently dropping attachments that already have a resolved media list. (#64394) Thanks @eric-fr4 and @vincentkoc.",
+      "Doctor/Discord: stop `openclaw doctor --修复` from rewriting legacy Discord preview-streaming config into the nested modern shape, so downgrades can still recover without hand-editing `channels.discord.streaming`. (#65035) Thanks @vincentkoc.",
+      "Gateway/auth: blank the shipped example gateway credential in `.env.example` and fail startup when a copied placeholder token or password is still configured, so operators cannot accidentally launch with a publicly known secret. (#64586) Thanks @navarrotech and @vincentkoc.",
+      "Memory/active-memory+dreaming: keep active-memory recall runs on the strongest resolved channel, consume managed dreaming heartbeat events exactly once, stop dreaming from re-ingesting its own narrative transcripts, and 添加 explicit repair/dedupe recovery flows in CLI, doctor, and the Dreams 界面.",
+      "Agents/queueing: carry orphaned active-turn user text into the next prompt before repairing transcript ordering, so follow-up messages that arrive mid-run are no longer silently dropped. (#65388) Thanks @adminfedres and @vincentkoc.",
+      "Gateway/keepalive: stop marking WebSocket tick broadcasts as droppable so slow or backpressured clients do not self-disconnect with `tick timeout` while long-running work is still alive. (#65256) Thanks @100yenadmin and @vincentkoc.",
+      "Matrix/mentions: keep room mention gating strict while accepting visible `@displayName` Matrix URI labels, so `req界面reMention` works for non-OpenClaw Matrix clients again. (#64796) Thanks @hclsys.",
+      "Doctor: warn when on-disk agent directories still exist under `~/.openclaw/agents/<id>/agent` but the matching `agents.list[]` entries are missing from config. (#65113) Thanks @neeravmakwana.",
+      "Telegram: route approval button callback queries onto a separate sequentializer lane so 插件 approval clicks can resolve immediately instead of deadlocking behind the blocked agent turn. (#64979) Thanks @nk3750.",
+      "Telegram/direct sessions: keep commentary-only assistant fallback payloads out of visible direct delivery, so Codex planning chatter cannot leak into Telegram DMs when a run has no `final_answer` text.",
+      "Gateway/keepalive: stop marking WebSocket tick broadcasts as droppable so slow or backpressured clients do not self-disconnect with `tick timeout` while long-running work is still alive. (#65436)",
+      "Gateway/插件s: always send a non-empty `idempotencyKey` for 插件 subagent runs, so dreaming narrative jobs stop failing gateway schema validation. (#65354) Thanks @CodeForgeNet.",
+      "Gateway/auth: blank the shipped example gateway credential in `.env.example` and fail startup when a copied placeholder token or password is still configured, so operators cannot accidentally launch with a publicly known secret. (#64586) Thanks @navarrotech.",
+      "插件s/memory-core dreaming: keep bundled `memory-core` loaded alongside an explicit external memory slot owner only when that owner enables dreaming, while preserving `插件s.slots.memory = \"none\"` disable semantics. (#65411) Thanks @pradeep7127.",
+      "Doctor/Discord: stop `openclaw doctor --修复` from rewriting legacy Discord preview-streaming config into the nested modern shape, so downgrades can still recover without hand-editing `channels.discord.streaming`.",
+      "Doctor: warn when on-disk agent directories still exist under `~/.openclaw/agents/<id>/agent` but the matching `agents.list[]` entries are missing from config. (#65113) Thanks @neeravmakwana.",
+      "CLI/插件s: honor `memory-wiki` when `插件s.allow` is set for `openclaw wiki`, and pass the active app config into the metadata registrar so 插件-owned wiki commands resolve the live 插件 config instead of falling back to defaults. (#64779, #65012)",
+      "QA/packaging: stop packaged QA helpers from crashing when optional scenario execution config is unavailable, so npm distributions can skip the repo-only scenario pack without breaking completion-cache and startup paths. (#65118) Thanks @EdderTalmor.",
+      "Media/audio transcription: surface the real provider failure when every audio transcription attempt fails, so status output and the CLI stop collapsing those errors into generic skips. (#65096) Thanks @l0cka.",
+      "Infra/net: 修复 multipart FormData fields (including `model`) being silently dropped when a guarded runtime fetch body crosses a FormData 实现ation boundary, restoring OpenAI audio transcription requests that failed with HTTP 400. (#64349) Thanks @petr-sloup.",
+      "Dreaming/diary: use the host local timezone for diary timestamps when `dreaming.timezone` is unset, and include the timezone abbreviation so `DREAMS.md` and the 界面 make local or UTC time explicit. (#65034, #65057)",
+      "Dreaming/promotion: raise phase reinforcement enough for repeated dreaming-only revisits to clear the default durable-memory gate after multiple days, instead of stalling just below the score threshold. (#64068) Thanks @vincentkoc.",
+      "Dreaming/light-sleep: compute staged candidate confidence from all recorded short-term signals instead of recall-only counts, so dreaming-only entries stop rendering as `confidence: 0.00`. (#64599) Thanks @vincentkoc.",
+      "插件s/memory: restore cached memory capability public artifacts on 插件-registry cache hits so memory-backed artifact surfaces stay visible after warm loads.",
+      "Gateway/cron: preserve requested isolated-agent config across runtime reloads so subagent jobs and heartbeat overrides keep the right workspace and heartbeat settings when the hot-loaded snapshot is stale.",
+      "Cron/isolated sessions: persist the right transcript path for each isolated run, including fresh session rollovers, so cron runs stop appending to stale session files.",
+      "Discord/gateway: clear stale heartbeat timers before reconnecting so zombie gateway callbacks cannot crash the process and drop in-flight replies. (#65009) Thanks @SARAMALI15792.",
+      "Matrix/mentions: keep room mention gating strict while accepting visible `@displayName` Matrix URI labels, so `req界面reMention` works for non-OpenClaw Matrix clients again. (#64796) Thanks @hclsys.",
+      "Agents/Anthropic replay: preserve immutable signed-thinking replay safety across stored and live reruns, keep non-thinking embedded `tool_result` user blocks intact, and drop conflicting preserved tool IDs before validation so retries stop degrading into omitted tool calls. (#65126) Thanks @shakkernerd.",
+      "Memory/QMD: allow channel sessions in the shipped default QMD scope, while still denying groups.",
+      "Memory/QMD: stop registering the legacy lowercase root memory file as a separate default collection, so QMD now prefers `MEMORY.md` and the `memory/` tree without duplicate collection-添加 warnings.",
+      "Memory/memory-core: watch the `memory` directory directly and ignore non-markdown churn so nested note changes still sync on macOS + Node 25 environments where recursive `memory/**/*.md` glob watching fails. (#64711) Thanks @jasonxargs-boop and @vincentkoc.",
+      "WhatsApp: centralize per-account connection ownership so reconnects, login recovery, and outbound readiness stay attached to the live socket instead of drifting across monitor and login paths. (#65290) Thanks @mcaxtr and @vincentkoc.",
+      "iMessage: retry transient `watch.subscribe` startup failures before tearing down the monitor, and sanitize startup error logging so brief local transport stalls do not immediately bounce the channel or leak raw imsg RPC payloads into logs. (#65393) Thanks @vincentkoc.",
+      "CLI/audio providers: report env-authenticated providers as configured in `openclaw infer audio providers --json`, while keeping trusted workspace provider env lookup defaults stable during auth setup. (#65491)",
+      "插件s/install: reinstall bundled runtime packages when the matching platform native optional child is missing, so packaged Windows installs can recover dependencies that were packed on another host OS."
+    ]
+  }
+},
+  {
+  "version": "2026.4.11",
+  "date": "2026-04-12",
+  "type": "稳定版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "Dreaming/memory-wiki: 添加 ChatGPT import ingestion plus new `Imported Insights` and `Memory Palace` diary subtabs so Dreaming can inspect imported source chats, compiled wiki pages, and full source pages directly from the 界面. (#64505)",
+      "Control 界面/webchat: render assistant media/reply/voice directives as structured chat bubbles, 添加 the `[embed ...]` rich output tag, and gate external embed URLs behind config. (#64104)",
+      "Tools/video_generate: 添加 URL-only generated asset delivery, typed `providerOptions`, reference audio inputs, per-asset role hints, `adaptive` aspect-ratio 支持, and a higher image-input cap so video providers can expose richer generation modes without forcing large files into memory. (#61987, #61988) Thanks @xieyongliang.",
+      "Feishu: 改进 document comment sessions with richer context parsing, comment reactions, and typing feedback so document-thread conversations behave more like chat conversations. (#63785)",
+      "Microsoft Teams: 添加 reaction 支持, reaction listing, Graph pagination, and delegated OAuth setup for sending reactions while preserving application-auth read paths. (#51646)",
+      "插件s: allow 插件 manifests to declare activation and setup descriptors so 插件 setup flows can describe req界面red auth, pairing, and 配置 steps without hardcoded core special cases. (#64780)",
+      "Ollama: cache `/API/show` context-window and capability metadata during model discovery so repeated picker refreshes stop refetching unchanged models, while still retrying after empty responses and invalidating on digest changes. (#64753) Thanks @ImLukeF.",
+      "Models/providers: surface how configured OpenAI-compatible endpoints are classified in embedded-agent de问题 logs, so local and proxy routing issues are easier to diagnose. (#64754) Thanks @ImLukeF.",
+      "QA/parity: 添加 the GPT-5.4 vs Opus 4.6 agentic parity report gate with shared scenario coverage checks, stricter evidence heuristics, and skipped-scenario accounting for maintainer review. (#64441) Thanks @100yenadmin."
+    ],
+    "improvements": [],
+    "bugfixes": [
+      "OpenAI/Codex OAuth: stop rewriting the upstream authorize URL scopes so new Codex sign-ins do not fail with `invalid_scope` before returning an authorization code. (#64713) Thanks @fuller-stack-dev.",
+      "Audio transcription: disable pinned DNS only for OpenAI-compatible multipart requests, while still validating hostnames, so OpenAI, Groq, and Mistral transcription works again without weakening other request paths. (#64766) Thanks @GodsBoy.",
+      "macOS/Talk Mode: after granting microphone permission on first enable, continue starting Talk Mode instead of req界面ring a second toggle. (#62459) Thanks @ggarber.",
+      "Control 界面/webchat: persist agent-run TTS audio replies into webchat history and preserve interleaved tool card pairing so generated audio and mixed tool output stay attached to the right messages. (#63514) Thanks @bittoby.",
+      "WhatsApp: honor the configured default account when the active listener helper is used without an explicit account id, so named default accounts do not get registered under `default`. (#53918) Thanks @yhyatt.",
+      "ACP/agents: suppress commentary-phase child assistant relay text in ACP parent stream 更新s, so spawned child runs stop leaking internal progress chatter into the parent session. Thanks @vincentkoc.",
+      "Agents/timeouts: honor explicit run timeouts in the LLM idle watchdog and align default timeout config so slow models can keep working until the configured limit instead of using the wrong idle window.",
+      "Config: include `asyncCompletion` in the generated zod schema so documented async completion config no longer fails with an unrecognized-key error. (#63618)",
+      "Google/Veo: stop sending the un支持ed `numberOfVideos` request field so Gemini Developer API Veo runs do not fail before OpenClaw can complete the intended Google video generation path. (#64723) Thanks @velvet-shark.",
+      "QA/packaging: stop packaged CLI startup and completion cache generation from reading repo-only QA scenario markdown, ship the bundled QA scenario pack in npm releases, and keep `openclaw completion --write-state` working even if QA setup is broken. (#64648) Thanks @obviyus.",
+      "Codex/QA: keep Codex app-server coordination chatter out of visible replies, 添加 a live QA leak scenario, and classify leaked harness meta text as a QA failure instead of a successful reply. Thanks @vincentkoc.",
+      "WhatsApp: route `message react` through the gateway-owned action path so reactions use the live WhatsApp listener in both DM and group chats, matching `message send` and `message poll`. Thanks @mcaxtr.",
+      "Auto-reply/WhatsApp: preserve inbound image attachment notes after media understanding so image edits keep the real saved media path instead of hallucinating a missing local path. (#64918) Thanks @ngutman.",
+      "Telegram/sessions: keep topic-scoped session initialization on the canonical topic transcript path when inbound turns omit `MessageThreadId`, so one topic session no longer alternates between bare and topic-qualified transcript files. (#64869) Thanks @jalehman.",
+      "Agents/failover: scope assistant-side fallback classification and surfaced provider errors to the current attempt instead of stale session history, so cross-provider fallback runs stop inheriting the previous provider's failure. (#62907) Thanks @stainlu.",
+      "MiniMax/OAuth: write `API: \"anthropic-messages\"` and `authHeader: true` into the `minimax-portal` config patch during `openclaw configure`, so re-authenticated portal setups keep Bearer auth routing working. (#64964) Thanks @ryanlee666."
+    ]
+  }
+},
+  {
+  "version": "2026.4.11-beta.1",
+  "date": "2026-04-11",
+  "type": "测试版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "Dreaming/memory-wiki: 添加 ChatGPT import ingestion plus new `Imported Insights` and `Memory Palace` diary subtabs so Dreaming can inspect imported source chats, compiled wiki pages, and full source pages directly from the 界面. (#64505)",
+      "Control 界面/webchat: render assistant media/reply/voice directives as structured chat bubbles, 添加 the `[embed ...]` rich output tag, and gate external embed URLs behind config. (#64104)",
+      "Tools/video_generate: 添加 URL-only generated asset delivery, typed `providerOptions`, reference audio inputs, per-asset role hints, `adaptive` aspect-ratio 支持, and a higher image-input cap so video providers can expose richer generation modes without forcing large files into memory. (#61987, #61988) Thanks @xieyongliang.",
+      "Feishu: 改进 document comment sessions with richer context parsing, comment reactions, and typing feedback so document-thread conversations behave more like chat conversations. (#63785)",
+      "Microsoft Teams: 添加 reaction 支持, reaction listing, Graph pagination, and delegated OAuth setup for sending reactions while preserving application-auth read paths. (#51646)",
+      "插件s: allow 插件 manifests to declare activation and setup descriptors so 插件 setup flows can describe req界面red auth, pairing, and 配置 steps without hardcoded core special cases. (#64780)",
+      "Ollama: cache `/API/show` context-window and capability metadata during model discovery so repeated picker refreshes stop refetching unchanged models, while still retrying after empty responses and invalidating on digest changes. (#64753) Thanks @ImLukeF.",
+      "Models/providers: surface how configured OpenAI-compatible endpoints are classified in embedded-agent de问题 logs, so local and proxy routing issues are easier to diagnose. (#64754) Thanks @ImLukeF.",
+      "QA/parity: 添加 the GPT-5.4 vs Opus 4.6 agentic parity report gate with shared scenario coverage checks, stricter evidence heuristics, and skipped-scenario accounting for maintainer review. (#64441) Thanks @100yenadmin."
+    ],
+    "improvements": [],
+    "bugfixes": [
+      "OpenAI/Codex OAuth: stop rewriting the upstream authorize URL scopes so new Codex sign-ins do not fail with `invalid_scope` before returning an authorization code. (#64713) Thanks @fuller-stack-dev.",
+      "Audio transcription: disable pinned DNS only for OpenAI-compatible multipart requests, while still validating hostnames, so OpenAI, Groq, and Mistral transcription works again without weakening other request paths. (#64766) Thanks @GodsBoy.",
+      "macOS/Talk Mode: after granting microphone permission on first enable, continue starting Talk Mode instead of req界面ring a second toggle. (#62459) Thanks @ggarber.",
+      "Control 界面/webchat: persist agent-run TTS audio replies into webchat history and preserve interleaved tool card pairing so generated audio and mixed tool output stay attached to the right messages. (#63514) Thanks @bittoby.",
+      "WhatsApp: honor the configured default account when the active listener helper is used without an explicit account id, so named default accounts do not get registered under `default`. (#53918) Thanks @yhyatt.",
+      "ACP/agents: suppress commentary-phase child assistant relay text in ACP parent stream 更新s, so spawned child runs stop leaking internal progress chatter into the parent session. Thanks @vincentkoc.",
+      "Agents/timeouts: honor explicit run timeouts in the LLM idle watchdog and align default timeout config so slow models can keep working until the configured limit instead of using the wrong idle window.",
+      "Config: include `asyncCompletion` in the generated zod schema so documented async completion config no longer fails with an unrecognized-key error. (#63618)",
+      "Google/Veo: stop sending the un支持ed `numberOfVideos` request field so Gemini Developer API Veo runs do not fail before OpenClaw can complete the intended Google video generation path. (#64723) Thanks @velvet-shark.",
+      "QA/packaging: stop packaged CLI startup and completion cache generation from reading repo-only QA scenario markdown, ship the bundled QA scenario pack in npm releases, and keep `openclaw completion --write-state` working even if QA setup is broken. (#64648) Thanks @obviyus.",
+      "Codex/QA: keep Codex app-server coordination chatter out of visible replies, 添加 a live QA leak scenario, and classify leaked harness meta text as a QA failure instead of a successful reply. Thanks @vincentkoc.",
+      "WhatsApp: route `message react` through the gateway-owned action path so reactions use the live WhatsApp listener in both DM and group chats, matching `message send` and `message poll`. Thanks @mcaxtr."
+    ]
+  }
+},
+  {
+  "version": "2026.4.10",
+  "date": "2026-04-11",
+  "type": "稳定版",
+  "latest": false,
+  "changes": {
+    "features": [
+      "Models/Codex: 添加 the bundled Codex provider and 插件-owned app-server harness so `codex/gpt-*` models use Codex-managed auth, native threads, model discovery, and compaction while `openai/gpt-*` stays on the normal OpenAI provider path. (#64298)",
+      "Memory/Active Memory: 添加 a new optional Active Memory 插件 that gives OpenClaw a dedicated memory sub-agent right before the main reply, so ongoing chats can automatically pull in relevant preferences, context, and past details without making users remember to manually say \"remember this\" or \"search memory\" first. Includes configurable message/recent/full context modes, live `/verbose` inspection, advanced prompt/thinking overrides for tuning, and opt-in transcript persistence for de问题ging. Docs: https://docs.openclaw.ai/concepts/active-memory. (#63286) Thanks @Takhoffman.",
+      "macOS/Talk: 添加 an experimental local MLX speech provider for Talk Mode, with explicit provider selection, local utterance playback, interruption handling, and system-voice fallback. (#63539) Thanks @ImLukeF.",
+      "Tools/video generation: 添加 Seedance 2.0 model refs to the bundled fal provider and submit the provider-specific duration, resolution, audio, and seed metadata fields needed for live Seedance 2.0 runs.",
+      "Microsoft Teams: 添加 message actions for pin, unpin, read, react, and listing reactions. (#53432) Thanks @sudie-codes.",
+      "QA/Matrix: 添加 a live `openclaw qa matrix` lane backed by a disposable Matrix homeserver, shared live-transport seams, and Matrix-specific transport coverage for threading, reactions, restart, and allowlist behavior. (#64489) Thanks @gumadeiras.",
+      "QA/Telegram: 添加 a live `openclaw qa telegram` lane for private-group bot-to-bot checks, harden its artifact handling, and preserve native Telegram command reply threading for QA verification. (#64303) Thanks @obviyus.",
+      "QA/testing: 添加 a `--runner multipass` lane for `openclaw qa s界面te` so repo-backed QA scenarios can run inside a disposable Linux VM and write back the usual report, summary, and VM logs. (#63426) Thanks @shakkernerd.",
+      "CLI/exec policy: 添加 a local `openclaw exec-policy` command with `show`, `preset`, and `set` subcommands for synchronizing requested `tools.exec.*` config with the local exec approvals file, plus follow-up hardening for node-host rejection, rollback safety, and sync conflict detection. (#64050)",
+      "Gateway: 添加 a `commands.list` RPC so remote gateway clients can discover runtime-native, text, skill, and 插件 commands with surface-aware naming and serialized argument metadata. (#62656) Thanks @samzong.",
+      "Models/providers: 添加 per-provider `models.providers.*.request.allowPrivateNetwork` for trusted self-hosted OpenAI-compatible endpoints, keep the opt-in scoped to model request surfaces, and refresh cached WebSocket managers when request transport overrides change. (#63671) Thanks @qas.",
+      "Feishu: standardize request user agents and register the bot as an AI agent so Feishu deployments identify OpenClaw consistently. (#63835) Thanks @evandance.",
+      "Matrix/partial streaming: 添加 MSC4357 live markers to draft preview sends and edits so 支持ing Matrix clients can render a live/typewriter animation and stop it when the final edit lands. (#63513) Thanks @TigerInYourDream.",
+      "Control 界面/dreaming: simplify the Scene and Diary surfaces, preserve unknown phase state for partial status payloads, and stabilize waiting-entry recency ordering so Dreaming status and review lists stay clear and deterministic. (#64035) Thanks @davemorin.",
+      "Agents: 添加 an opt-in strict-agentic embedded Pi execution contract for GPT-5-family runs so plan-only or filler turns keep acting until they hit a real blocker. (#64241) Thanks @100yenadmin.",
+      "Agents/OpenAI: 添加 provider-owned OpenAI/Codex tool schema 兼容性 and surface embedded-run replay/liveness state for long-running runs. (#64300) Thanks @100yenadmin.",
+      "Docs i18n: chunk raw doc translation, reject truncated tagged outputs, avoid ambiguous body-only wrapper unwrapping, and recover from terminated Pi translation sessions without changing the default `openai/gpt-5.4` path. (#62969, #63808) Thanks @hxy91819."
+    ],
+    "improvements": [],
+    "bugfixes": [
+      "Browser/安全: tighten browser and sandbox navigation defenses across strict SSRF defaults, hostname allowlists, interaction-driven redirects, subframes, CDP discovery, existing sessions, tab actions, noVNC, marker-span sanitization, and Docker CDP source-range enforcement. (#61404, #63332, #63882, #63885, #63889, #64367, #64370, #64371)",
+      "安全/tools: harden exec preflight reads, host env denylisting, node output boundaries, outbound host-media reads, profile-mutation authorization, 插件 install dependency scanning, ACPX tool hooks, Gmail watcher token redaction, and oversized realtime WebSocket frame handling. (#62333, #62661, #62662, #63277, #63551, #63553, #63886, #63890, #63891, #64459)",
+      "OpenAI/Codex: 添加 req界面red Codex OAuth scopes, classify provider/runtime failures more clearly, stop suggesting `/elevated full` when auto-approved host exec is unavailable, 添加 OpenAI/Codex tool-schema 兼容性, and preserve embedded-run replay/liveness truth across compaction retries and mutating side effects. (#64300, #64439) Thanks @100yenadmin.",
+      "CLI/WhatsApp media sends: route gateway-mode outbound sends with `--media` through the channel `sendMedia` path and preserve media access context, so WhatsApp document and attachment sends stop silently dropping the file while still delivering the caption. (#64478, #64492) Thanks @ShionEria.",
+      "Microsoft Teams: restore media downloads for personal DMs, Bot Framework `a:` conversations, OneDrive/SharePoint shared files, and Graph-backed chat IDs; accept Bot Framework audience tokens; prevent feedback-learning filename collisions; keep long tool chains alive with typing indicators; 添加 SSO sign-in callbacks; inject parent context for thread replies; and deliver cron announcements to Teams conversation IDs. (#54932, #55383, #55386, #58001, #58249, #58774, #59731, #60956, #62219, #62674, #63063, #63942, #63945, #63949, #63951, #63953, #64087, #64088, #64089)",
+      "Gateway/tailscale: start Tailscale exposure and the gateway 更新 check before awaiting channel and 插件 sidecar startup so remote operators are not locked out when startup sidecars stall.",
+      "Gateway/startup: keep WebSocket RPC available while channels and 插件 sidecars start, hold `chat.history` unavailable until startup sidecars finish so synchronous history reads cannot stall startup (reported in #63450), refresh advertised gateway methods after deferred 插件 reloads, and enforce the pre-auth WebSocket upgrade budget before the no-handler 503 path so upgrade floods cannot bypass connection limits during that window. (#63480) Thanks @neeravmakwana.",
+      "WhatsApp: keep inbound replies, media, composing indicators, and queued outbound deliveries attached to the current socket across reconnect gaps, including fresh retry-eligible sends after the listener comes back. (#30806, #46299, #62892, #63916) Thanks @mcaxtr.",
+      "Gateway/thread routing: preserve Slack, Telegram, Mattermost, Matrix, ACP, restart-sentinel, and agent announce delivery targets so subagent, cron, stream-relay, session fallback, and restart messages land back in the originating thread, topic, or room casing. (#54840, #57056, #63143, #63228, #63506, #64343, #64391)",
+      "Models/fallback: preserve `/models` selection across transient primary-model failures and config reloads, allow timeout cooldown probes, classify OpenRouter no-endpoints responses, detect llama.cpp context overflows, and keep provider/runtime context metadata stable through reloads. (#61472, #64196, #64471)",
+      "Agents/BTW: keep `/btw` side questions working after tool-use turns by stripping replayed tool blocks, hidden reasoning, and malformed image payloads, omitting empty tool arrays, allowing Bedrock `auth: \"aws-sdk\"`, and routing Feishu `/btw` plus `/stop` through bounded out-of-band lanes. (#64218, #64219, #64225, #64324) Thanks @ngutman.",
+      "Control 界面/BTW: render `/btw` side results as dismissible ephemeral cards in the browser, send `/btw` immediately during active runs, and clear stale BTW cards on reset flows so webchat matches the intended detached side-question behavior. (#64290) Thanks @ngutman.",
+      "Commands/targeting: use the selected agent or session for command output, send policy, usage/cost, context reports, model lists, bash sandbox hints, BTW/compact working directories, 插件 commands, and session exports so multi-agent commands describe and mutate the intended target instead of the requester.",
+      "Conversation bindings: normalize focused/current conversation ids, preserve binding metadata on account and Discord rebinds, avoid stale Discord lifecycle windows, and keep generic activity touches persisted so reply routing survives rebinds and restarts.",
+      "iMessage/self-chat: disting界面sh normal DM outbound rows from true self-chat using `destination_caller_id` plus chat participants, preserve multi-handle self-chat aliases, drop ambiguous reflected echoes, and strip wrapped imsg RPC text fields. (#61619, #63868, #63980, #63989, #64000) Thanks @neeravmakwana.",
+      "Matrix: keep multi-account room scoping consistent, keep packaged crypto migrations warning-only when appropriate, preserve ordered block streaming, 添加 explicit Matrix block-streaming opt-in, and resolve verification/bootstrap from the packaged runtime entry. (#58449, #59249, #59266, #64373) Thanks @gumadeiras.",
+      "Telegram/安全: tighten Telegram `allowFrom` sender validation and keep `/whoami` allowlist reporting in sync with command auth checks.",
+      "Agents/timeouts: extend the default LLM idle window to 120s and keep silent no-token idle timeouts on recovery paths, so slow models can retry or fall back before users see an error.",
+      "Gateway/agents: preserve configured model selection and richer `IDENTITY.md` content across agent create/更新 flows and workspace moves, and fail safely instead of silently overwriting unreadable identity files. (#61577) Thanks @samzong.",
+      "Skills/TaskFlow: restore valid frontmatter fences for the bundled `taskflow` and `taskflow-inbox-triage` skills and copy bundled `SKILL.md` files as hard dist-runtime copies so skills stay discoverable and loadable after 更新s. (#64166, #64469) Thanks @extrasmall0.",
+      "Skills: respect overridden home directories when loading personal skills so service, test, and custom launch environments read the intended user skill directory instead of the process home.",
+      "Windows/exec: settle supervisor waits from child exit state after stdout and stderr drain even when `close` never arrives, so CLI commands stop hanging or dying with forced `SIGKILL` on Windows. (#64072) Thanks @obviyus.",
+      "Browser/sandbox: prevent sandbox browser CDP startup hangs by recreating containers when the browser 安全 hash changes and by waiting on the correct sandbox browser lifecycle. (#62873) Thanks @Syysean.",
+      "QQBot/streaming: make block streaming configurable per QQ bot account via `streaming.mode` (`\"partial\"` | `\"off\"`, default `\"partial\"`) instead of hardcoding it off, so responses can be delivered incrementally. (#63746)",
+      "QQBot/config: allow extra fields in `channels.qqbot` and `channels.qqbot.accounts.*` so extended qqbot b界面lds can 添加 new config options without gateway startup failing on schema validation. (#64075) Thanks @WideLee.",
+      "Dreaming/gateway: req界面re `operator.admin` for persistent `/dreaming on|off` changes and treat missing gateway client scopes as unprivileged instead of silently allowing config writes. (#63872) Thanks @mbelinky.",
+      "Gateway/pairing: prefer explicit QR bootstrap auth over earlier Tailscale auth classification so iOS `/pair qr` silent bootstrap pairing does not fall through to `pairing req界面red`. (#59232) Thanks @ngutman.",
+      "Browser/control: auto-generate browser-control auth tokens for `none` and `trusted-proxy` modes, and route browser auth/profile/doctor helpers through the public browser 插件 facades. (#63280, #63957) Thanks @pgondhi987.",
+      "Browser/act: centralize `/act` request normalization and execution dispatch while 添加ing stable machine-readable route-level error codes for invalid requests, selector misuse, evaluate-disabled gating, target mismatch, and existing-session un支持ed actions. (#63977) Thanks @joshavant.",
+      "安全/QQBot: enforce media storage boundaries for all outbound local file paths and route image-size probes through SSRF-guarded media fetching instead of raw `fetch()`. (#63271, #63495) Thanks @pgondhi987.",
+      "Channel setup: ignore workspace 插件 shadows when resolving trusted channel setup catalog entries so onboarding and setup flows keep using the bundled, trusted setup contract.",
+      "Gateway/memory startup: load the explicitly selected memory-slot 插件 during gateway startup, while keeping restrictive allowlists and implicit default memory slots from auto-starting unrelated memory 插件s. (#64423) Thanks @EronFan.",
+      "Config/插件s: let config writes keep disabled 插件 entries without forcing req界面red 插件 config schemas or crashing raw 插件 validation, and avoid re-activating 插件 registry state during schema checks. (#54971, #63296) Thanks @fuller-stack-dev.",
+      "Config validation: surface the actual offending field for strict-schema union failures in bindings, including top-level unexpected keys on the matching ACP branch. (#40841) Thanks @Hollychou924.",
+      "Wizard/插件 config: coerce integer-typed 插件 config fields from interactive text input so integer schema values persist as numbers instead of failing validation. (#63346) Thanks @jalehman.",
+      "Daemon/gateway install: preserve safe custom service env vars on forced reinstall, merge prior custom PATH segments behind the managed service PATH, and stop 移除d managed env keys from persisting as custom carryover. (#63136) Thanks @WarrenJones.",
+      "Cron/scheduling: treat `nextRunAtMs <= 0` as invalid across cron 更新, maintenance, timer, and stale-delivery paths so corrupted zero timestamps self-heal instead of causing immediate runs or skipped deliveries. (#63507) Thanks @WarrenJones.",
+      "Cron/auth: resolve auth profiles consistently for isolated cron jobs so scheduled runs use the same configured provider credentials as interactive sessions. (#62797) Thanks @neeravmakwana.",
+      "Tasks: let `openclaw tasks cancel` cancel stuck background tasks that never reached a normal terminal state. (#62506) Thanks @neeravmakwana.",
+      "Sessions/model selection: preserve catalog-backed session model labels, provider-qualified context limits, and already-qualified session model refs when catalog metadata is unavailable, so model selection and memory/context budgets survive reloads without bogus provider pre修复es. (#61382, #62493) Thanks @Mule-ME.",
+      "Status: show configured fallback models in `/status` and shared session status cards so per-agent fallback 配置 is visible before a live failover happens. (#33111) Thanks @AnCoSONG.",
+      "`/context detail` now compares the tracked prompt estimate with cached context usage and surfaces untracked provider/runtime overhead when present. (#28391) Thanks @ImLukeF.",
+      "Gateway/sessions: scope bare `sessions.create` aliases like `main` to the requested agent while preserving the canonical `global` and `unknown` sentinel keys. (#58207) Thanks @jalehman.",
+      "Gateway/session reset: emit the typed `before_reset` hook for gateway `/new` and `/reset`, preserving reset-hook behavior even when the previous transcript has already been archived. (#53872) Thanks @VACInc.",
+      "插件s/commands: pass the active host `sessionKey` into 插件 command contexts, and include `sessionId` when it is already available from the active session entry, so bundled and third-party commands can resolve the current conversation reliably. (#59044) Thanks @jalehman.",
+      "Agents/auth: honor `models.providers.*.authHeader` for pi embedded runner model requests by injecting `Authorization: Bearer <APIKey>` when requested. (#54390) Thanks @lndyzwdxhs.",
+      "Claude CLI: clear inherited Anthropic auth/header environment aliases before spawning Claude Code and 添加 sanitized CLI backend auth-env diagnostics for de问题ging gateway-run provider selection.",
+      "Agents/failover: classify AbortError and stream-abort messages as timeout so Ollama NDJSON stream aborts stop showing `reason=unknown` in model fallback logs. (#58324) Thanks @yelog.",
+      "Fireworks/FirePass: disable Kimi K2.5 Turbo reasoning output by forcing thinking off on the FirePass path and hardening the provider wrapper so hidden reasoning no longer leaks into visible replies. (#63607) Thanks @frankekn.",
+      "Discord: 更新 Carbon to v0.15.0. Thanks @thewilloftheshadow.",
+      "Config/Discord: coerce safe integer numeric Discord IDs to strings during config validation, keep unsafe or precision-losing numeric snowflakes rejected, and align `openclaw doctor` repair g界面dance with the same fail-closed behavior. (#45125) Thanks @moliendocode.",
+      "BlueBubbles/config: accept `enrichGroupParticipantsFromContacts` in the core strict config schema so gateways no longer fail validation or startup when the BlueBubbles 插件 writes that field. (#56889) Thanks @zqchris.",
+      "Feishu/webhooks: read webhook bodies through the pre-auth guard so unauthenticated webhook traffic stays under the same body budget as other protected channel ingress paths.",
+      "Tools/web_fetch: 添加 an opt-in `tools.web.fetch.ssrfPolicy.allowRfc2544BenchmarkRange` config so fake-IP proxy environments that resolve public sites into `198.18.0.0/15` can use `web_fetch` without weakening the default SSRF block. (#61830) Thanks @xing-xing-coder.",
+      "Dreaming/cron: reconcile managed dreaming cron from startup config and runtime lifecycle changes, but only recover managed dreaming cron state during heartbeat-triggered dreaming checks so ordinary chat traffic does not recreate 移除d jobs. (#63873, #63929, #63938) Thanks @mbelinky.",
+      "Memory/lancedb: accept `dreaming` config when `memory-lancedb` owns the memory slot so Dreaming surfaces can read slot-owner settings without schema rejection. (#63874) Thanks @mbelinky.",
+      "Control 界面/dreaming: keep the Dreaming trace area contained and scrollable so overlays no longer cover tabs or blow out the page layout. (#63875) Thanks @mbelinky.",
+      "Dreaming/narrative: harden request-scoped diary fallback so scheduled dreaming only falls back on the dedicated subagent-runtime error, stop trusting spoofable raw error-code objects, and avoid leaking workspace paths when local fallback writes fail. (#64156) Thanks @mbelinky.",
+      "Dreaming/diary: 添加 idempotent narrative subagent runs, preserve restrictive `DREAMS.md` permissions during atomic writes, and surface temp cleanup failures so repeated sweeps do not double-run the same narrative request or silently weaken diary safety. (#63876) Thanks @mbelinky.",
+      "Heartbeats/sessions: 移除 stale accumulated isolated heartbeat session keys when the next tick converges them back to the canonical sibling, so repaired sessions stop showing orphaned `:heartbeat:heartbeat` variants in session listings. (#59606) Thanks @rogerdigital.",
+      "Gateway/run cleanup: 修复 stale run-context TTL cleanup so the new maintenance sweep resets orphaned run sequence state and prevents unbounded run-context growth. (#52731) Thanks @artwalker.",
+      "界面/compaction: keep the compaction indicator in a retry-pending state until the run actually finishes, so the 界面 does not show `Context compacted` before compaction actually finishes. (#55132) Thanks @mpz4life.",
+      "Cron/tool schemas: keep cron tool schemas strict-model-friendly while still preserving `failureAlert=false`, nullable `agentId`/`sessionKey`, and flattened 添加/更新 recovery for the newly exposed cron job fields. (#55043) Thanks @brunolorente.",
+      "Git metadata: read commit ids from packed refs as well as loose refs so version and status metadata stay accurate after repository maintenance. (#63943)",
+      "Gateway: keep `commands.list` skill entries categorized under tools and include provider-aware 插件 `nativeName` metadata even when `scope=text`, so remote clients can group skills correctly and map text-surface 插件 commands back to native aliases. (#64147)",
+      "T界面: reset footer activity to idle when switching sessions so a stale streaming indicator cannot persist after the selection changes. (#63988) Thanks @neeravmakwana.",
+      "Claude CLI: stop marking spawned Claude Code runs as host-managed so they keep using normal CLI subscription behavior. (#64023) Thanks @Alex-Alaniz.",
+      "Codex auth: brand Codex OAuth flows as OpenClaw in user-visible auth prompts and diagnostics.",
+      "Gateway/pairing: fail closed for paired device records that have no device tokens, and reject pairing approvals whose requested scopes do not match the requested device roles.",
+      "ACP/gateway chat: classify lifecycle errors before forwarding them to ACP clients so refusals use ACP's refusal stop reason while transient backend errors continue to finish as normal turns.",
+      "Claude CLI/skills: pass eligible OpenClaw skills into CLI runs, including native Claude Code skill resolution via a temporary 插件 plus per-run skill env/API key injection. (#62686, #62723) Thanks @zomars.",
+      "Discord: keep generated auto-thread names working with reasoning models by giving title generation enough output budget for thinking plus visible title text. (#64172) Thanks @hanamizuki.",
+      "Heartbeat: ignore doc-only Markdown fence markers in the default `HEARTBEAT.md` template so comment-only heartbeat scaffolds skip API calls again. (#61690, #63434) Thanks @ravyg.",
+      "Reply/skills: keep resolved skill and memory secret config stable through embedded reply runs so raw SecretRefs in secondary skill settings no longer crash replies when the gateway already has the live env. (#64249) Thanks @mbelinky.",
+      "Dreaming/startup: keep 插件-registered startup hooks alive across workspace hook reloads and include dreaming startup owners in the gateway startup 插件 scope, so managed Dreaming cron registration comes back reliably after gateway boot. (#62327, #64258) Thanks @mbelinky.",
+      "插件s: treat duplicate `registerService` calls from the same 插件 id as idempotent so snapshot and activation loads no longer emit spurious `service already registered` diagnostics. (#62033, #64128) Thanks @ly85206559.",
+      "Discord/TTS: route auto voice replies through the native voice-note path so Discord receives Opus voice messages instead of regular audio attachments. (#64096) Thanks @LiuHuaize.",
+      "Config/插件s: use 插件-owned command alias metadata when `插件s.allow` contains runtime command names like `dreaming`, and point users at the owning 插件 instead of stale 插件-not-found g界面dance. (#64191, #64242) Thanks @feiskyer.",
+      "Agents/Gemini: strip orphaned `req界面red` entries from Gemini tool schemas so provider validation no longer rejects tools after schema cleanup or union flattening. (#64284) Thanks @xxxxxmax.",
+      "Assistant text: strip Qwen-style XML tool call payloads from visible replies so web and channel messages no longer show raw `<tool_call><function=...>` output. (#63999, #64214) Thanks @MoerAI.",
+      "Daemon/gateway: prevent systemd restart storms on 配置 errors by exiting with `EX_CONFIG` and 添加ing generated unit restart-prevention guards. (#63913) Thanks @neo1027144-creator.",
+      "Agents/exec: prevent gateway crash (\"Agent listener invoked outside active run\") when a subagent exec tool produces stdout/stderr after the agent run has ended or been aborted. (#62821) Thanks @openperf.",
+      "Gateway/OpenAI compat: return real `usage` for non-stream `/v1/chat/completions` responses, emit the final usage chunk when `stream_options.include_usage=true`, and bound usage-gated stream finalization after lifecycle end. (#62986) Thanks @Lellansin.",
+      "Agents/subagents: deduplicate delivered completion announces so retry or re-entry cleanup does not inject duplicate internal-context completion turns into the parent session. (#61525) Thanks @100yenadmin.",
+      "Agents/exec: keep sandboxed `tools.exec.host=auto` sessions from honoring per-call `host=node` or `host=gateway` overrides while a sandbox runtime is active, and stop advertising node routing in that state so exec stays on the sandbox host. (#63880)",
+      "Agents/subagents: preserve archived delete-mode runs until `sessions.delete` succeeds and prevent overlapping archive sweeps from duplicating in-flight cleanup attempts. (#61801) Thanks @100yenadmin.",
+      "Cron/isolated agent: run scheduled agent turns as non-owner senders so owner-only tools stay unavailable during cron execution. (#63878)",
+      "Discord/sandbox: include `image` in sandbox media param normalization so Discord event cover images cannot bypass sandbox path rewriting. (#64377) Thanks @mmaps.",
+      "Agents/exec: extend exec completion detection to cover local background exec formats so the owner-downgrade fires correctly for all exec paths. (#64376) Thanks @mmaps.",
+      "Hooks/安全: mark agent hook system events as untrusted and sanitize hook display names before cron metadata reuse. (#64372) Thanks @eleqtrizit.",
+      "Daemon/launchd: keep `openclaw gateway stop` persistent without uninstalling the macOS LaunchAgent, re-enable it on explicit restart or repair, and harden launchd label handling. (#64447) Thanks @ngutman.",
+      "插件s/context engines: preserve `插件s.slots.contextEngine` through normalization and keep explicitly selected workspace context-engine 插件s enabled, so loader diagnostics and 插件 activation stop dropping that slot selection. (#64192) Thanks @hclsys.",
+      "Heartbeat: stop top-level `interval:` and `prompt:` fields outside the `tasks:` block from bleeding into the last parsed heartbeat task. (#64488) Thanks @Rahulkumar070.",
+      "Agents/OpenAI replay: preserve malformed function-call arguments in stored assistant history, avoid double-encoding preserved raw strings on replay, and coerce replayed string args back to objects at Anthropic and Google provider boundaries. (#61956) Thanks @100yenadmin.",
+      "Heartbeat/config: accept and honor `agents.defaults.heartbeat.timeoutSeconds` and per-agent heartbeat timeout overrides for heartbeat agent turns. (#64491) Thanks @cedillarack.",
+      "CLI/devices: make implicit `openclaw devices approve` selection preview-only and req界面re approving the exact request ID, preventing latest-request races during device pairing. (#64160) Thanks @coygeek.",
+      "Media/安全: honor sender-scoped `toolsBySender` policy for outbound host-media reads so denied senders cannot trigger host file disclosure via attachment hydration. (#64459) Thanks @eleqtrizit.",
+      "Browser/安全: reject strict-policy hostname navigation unless the hostname is an explicit allowlist exception or IP literal, and route CDP HTTP discovery through the pinned SSRF fetch path. (#64367) Thanks @eleqtrizit.",
+      "Models/vLLM: ignore empty `tool_calls` arrays from reasoning-model OpenAI-compatible replies, reset false `toolUse` stop reasons when no actual tool calls were parsed, and stop sending `tool_choice` unless tools are present so vLLM reasoning responses no longer hang indefinitely. (#61197, #61534) Thanks @balajisiva."
+    ]
+  }
+},
+  {
   "version": "2026.4.9",
   "date": "2026-04-09",
   "type": "稳定版",
-  "latest": true,
+  "latest": false,
   "changes": {
     "features": [
       "Memory/dreaming: 添加 a grounded REM backfill lane with historical `rem-harness --path`, diary commit/reset flows, cleaner durable-fact extraction, and live short-term promotion 集成 so old daily notes can replay into Dreams and durable memory without a second memory stack. Thanks @mbelinky.",
@@ -273,898 +690,6 @@ const changelogData = ref([
       "Network/fetch guard: skip target DNS pinning when trusted env-proxy mode is active so proxy-only sandboxes can let the trusted proxy resolve outbound hosts. (#59007) Thanks @cluster2600."
     ]
   }
-},
-  {
-  "version": "2026.4.7",
-  "date": "2026-04-08",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "CLI/infer: 添加 a first-class `openclaw infer ...` hub for provider-backed inference workflows across model, media, web, and embedding tasks. Thanks @Takhoffman.",
-      "Tools/media generation: auto-fallback across auth-backed image, music, and video providers by default, preserve intent during provider switches, remap size/aspect/resolution/duration hints to the closest 支持ed option, and surface provider capabilities plus mode-aware video-to-video 支持.",
-      "Memory/wiki: restore the bundled `memory-wiki` stack with 插件, CLI, sync/query/apply tooling, memory-host 集成, structured claim/evidence fields, compiled digest retrieval, claim-health linting, contradiction clustering, staleness dashboards, and freshness-weighted search. Thanks @vincentkoc.",
-      "插件s/webhooks: 添加 a bundled webhook ingress 插件 so external automation can create and drive bound TaskFlows through per-route shared-secret endpoints. (#61892) Thanks @mbelinky.",
-      "Gateway/sessions: 添加 persisted compaction checkpoints plus Sessions 界面 branch/restore actions so operators can inspect and recover pre-compaction session state. (#62146) Thanks @scoootscooob.",
-      "Compaction: 添加 pluggable compaction provider registry so 插件s can replace the b界面lt-in summarization pipeline. Configure via `agents.defaults.compaction.provider`; falls back to LLM summarization on provider failure. (#56224) Thanks @DhruvBhatia0.",
-      "Agents/system prompt: 添加 `agents.defaults.systemPromptOverride` for controlled prompt experiments plus heartbeat prompt-section controls so heartbeat runtime behavior can stay enabled without injecting heartbeat instructions every turn.",
-      "Providers/Google: 添加 Gemma 4 model 支持 and keep Google fallback resolution on the requested provider path so native Google Gemma routes work again. (#61507) Thanks @eyjohn.",
-      "Providers/Google: preserve explicit thinking-off semantics for Gemma 4 while still enabling Gemma reasoning 支持 in 兼容性 wrappers. (#62127) Thanks @romgenie.",
-      "Providers/Arcee AI: 添加 a bundled Arcee AI provider 插件 with Trinity catalog entries, OpenRouter 支持, and 更新d onboarding/auth g界面dance. (#62068) Thanks @arthurbr11.",
-      "Providers/Anthropic: restore Claude CLI as the preferred local Anthropic path in onboarding, model-auth g界面dance, doctor flows, and Docker Claude CLI live lanes again.",
-      "Providers/Ollama: detect vision capability from the `/API/show` response and set image input on models that 支持 it so Ollama vision models accept image attachments. (#62193) Thanks @BruceMacD.",
-      "Memory/dreaming: ingest redacted session transcripts into the dreaming corpus with per-day session-corpus notes, cursor checkpointing, and promotion/doctor 支持. (#62227) Thanks @vignesh07.",
-      "Providers/inferrs: 添加 string-content 兼容性 for stricter OpenAI-compatible chat backends, document `inferrs` setup with a full config example, and 添加 troubleshooting g界面dance for local backends that pass direct probes but fail on full agent-runtime prompts.",
-      "Agents/context engine: expose prompt-cache runtime context to context engines and keep current-turn prompt-cache usage aligned with the active attempt instead of stale prior-turn assistant state. (#62179) Thanks @jalehman.",
-      "插件 SDK/context engines: pass `availableTools` and `citationsMode` into `assemble()`, and expose memory-artifact and memory-prompt seams so companion 插件s and non-legacy context engines can consume active memory state without reaching into internals. Thanks @vincentkoc.",
-      "ACP/ACPX 插件: bump the bundled `acpx` pin to `0.5.1` so 插件-local installs and strict version checks pick up the latest published runtime release. (#62148) Thanks @onutc.",
-      "Discord/events: allow `event-create` to accept a cover image URL or local file path, load and validate PNG/JPG/GIF event cover media, and pass the encoded image payload through Discord admin action/runtime paths. (#60883) Thanks @bittoby."
-    ],
-    "improvements": [],
-    "bugfixes": [
-      "CLI/infer: keep provider-backed infer behavior aligned with actual runtime execution by 修复ing explicit TTS override handling, profile-aware gateway TTS prefs resolution, per-request transcription `prompt`/`language` overrides, image output MIME/extension mismatches, configured web-search fallback behavior, and agent-vs-CLI web-search execution drift.",
-      "插件s/media: when `插件s.allow` is set, capability fallback now merges bundled capability 插件 ids into the allowlist (not only `插件s.entries`), so media understanding providers such as OpenAI-compatible STT load for voice transcription without req界面ring `openai` in `插件s.allow`. (#62205) Thanks @neeravmakwana.",
-      "Agents/history and replies: buffer phaseless OpenAI WS text until a real assistant phase arrives, keep replay and SSE history sequence tracking aligned, hide commentary and leaked tool XML from user-visible history, and keep history-based follow-up replies on `final_answer` text only. (#61729, #61747, #61829, #61855, #61954) Thanks @100yenadmin and contributors.",
-      "Control 界面: show `/tts` audio replies in webchat, detect mistaken `?token=` auth links with the correct `#token=` hint, and keep Copy, Canvas, and mobile exec-approval 界面 from covering chat content on narrow screens. (#54842, #61514, #61598) Thanks @neeravmakwana.",
-      "iOS/gateway: replace string-matched connection error 界面 with structured gateway connection problems, preserve actionable pairing/auth failures over later generic disconnect noise, and surface reusable problem banners and details across onboarding, settings, and root status surfaces. (#62650) Thanks @ngutman.",
-      "T界面: route `/status` through the shared session-status command, keep commentary hidden in history, strip raw envelope metadata from async command notices, preserve fallback streaming before per-attempt failures finalize, and restore Kitty keyboard state on exit or fatal crashes. (#49130, #59985, #60043, #61463) Thanks @biefan and contributors.",
-      "iOS/Watch exec approvals: keep Apple Watch review and approval recovery working while the iPhone is locked or backgrounded, including reconnect recovery, pending approval persistence, notification cleanup, and APNs-backed watch refresh recovery. (#61757) Thanks @ngutman.",
-      "Agents/context overflow: combine oversized and aggregate tool-result recovery in one pass and restore a total-context overflow backstop so recoverable sessions retry instead of failing early. (#61651) Thanks @Takhoffman.",
-      "Auth/OpenAI Codex OAuth: reload fresh on-disk credentials inside the locked refresh path and retry once after `refresh_token_reused` rotates only the stored refresh token, so relogin/restart recovery stops getting stuck on stale cached auth state. Thanks @owen-ever.",
-      "Auth/OpenAI Codex OAuth: keep native `/model ...@profile` selections on the target session and honor explicit user-locked auth profiles even when per-agent auth order excludes them. (#62744) Thanks @jalehman.",
-      "Providers/Anthropic: preserve thinking blocks for Claude Opus 4.5+, Sonnet 4.5+, and newer Claude 4-family models so prompt-cache pre修复es keep matching, and skip `service_tier` injection on OAuth-authenticated stream wrapper requests so Claude OAuth streaming stops failing with HTTP 401. (#60356, #61793)",
-      "Agents/Claude CLI: surface nested API error messages from structured CLI output so billing/auth/provider failures show the real provider error instead of an opaque CLI failure.",
-      "Agents/exec: preserve explicit `host=node` routing under elevated defaults when `tools.exec.host=auto`, fail loud on invalid elevated cross-host overrides, and keep `strictInlineEval` commands blocked after approval timeouts instead of falling through to automatic execution. (#61739) Thanks @obviyus.",
-      "Nodes/exec approvals: keep `host=node` POSIX transport shell wrappers (`/bin/sh -lc ...`) aligned with inner-command allowlist analysis so allowlisted scripts stop prompting unnecessarily, while Windows `cmd.exe` wrapper runs stay approval-gated. (#62401) Thanks @ngutman.",
-      "Nodes/exec approvals: keep Windows `cmd.exe /c` wrapper runs approval-gated even when `env` carriers, including env-assignment carriers, wrap the shell invocation. (#62439) Thanks @ngutman.",
-      "Gateway tool/exec config: block model-facing `gateway config.apply` and `config.patch` writes from changing exec approval paths such as `safeBins`, `safeBinProfiles`, `safeBinTrustedDirs`, and `strictInlineEval`, while still allowing unchanged structured values through. (#62001) Thanks @eleqtrizit.",
-      "Host exec/env sanitization: block dangerous Java, Rust, Cargo, Git, Kubernetes, cloud credential, config-path, and Helm env overrides so host-run tools cannot be redirected to attacker-chosen code, config, credentials, or repository state. (#59119, #62002, #62291) Thanks @eleqtrizit and contributors.",
-      "Commands/allowlist: req界面re owner authorization for `/allowlist 添加` and `/allowlist 移除` before channel resolution, so non-owner but command-authorized senders can no longer persistently rewrite allowlist policy state. (#62383) Thanks @pgondhi987.",
-      "Feishu/docx uploads: honor `tools.fs.workspaceOnly` for local `upload_file` and `upload_image` paths by forwarding workspace-constrained `localRoots` into the media loader, so docx uploads can no longer read host-local files outside the workspace when workspace-only mode is active. (#62369) Thanks @pgondhi987.",
-      "Network/fetch guard: drop request bodies and body-describing headers on cross-origin `307` and `308` redirects by default, so attacker-controlled redirect hops cannot receive secret-bearing POST payloads from SSRF-guarded fetch flows unless a caller explicitly opts in. (#62357) Thanks @pgondhi987.",
-      "Browser/SSRF: treat main-frame `document` redirect hops as navigations even when Playwright does not flag them as `isNavigationRequest()`, so strict private-network blocking still stops forbidden redirect pivots before the browser reaches the internal target. (#62355) Thanks @pgondhi987.",
-      "Browser/node invoke: block persistent browser profile create, reset, and delete mutations through `browser.proxy` on both gateway-forwarded `node.invoke` and the node-host proxy path, even when no profile allowlist is configured. (#60489)",
-      "Gateway/node pairing: req界面re a fresh pairing request when a previously paired node reconnects with 添加itional declared commands, and keep the live session pinned to the earlier approved command set until the upgrade is approved. (#62658) Thanks @eleqtrizit.",
-      "Gateway/auth: invalidate existing shared-token and password WebSocket sessions when the configured secret rotates, so stale authenticated sockets cannot stay attached after token or password changes. (#62350) Thanks @pgondhi987.",
-      "MS Teams/安全: validate file-consent upload URLs against HTTPS, Microsoft/SharePoint host allowlists, and private-IP DNS checks before uploading attachments, blocking SSRF-style consent-upload abuse. (#23596)",
-      "Media/base64 decode guards: enforce byte limits before decoding missed base64-backed Teams, Signal, QQ Bot, and image-tool payloads so oversized inbound media and data URLs no longer bypass pre-decode size checks. (#62007) Thanks @eleqtrizit.",
-      "Runtime event trust: mark background `notifyOnExit` summaries, ACP parent-stream relays, and wake-hook payloads as untrusted system events so lower-trust runtime output no longer re-enters later turns as trusted `System:` text. (#62003)",
-      "Auto-reply/media: allow managed generated-media `MEDIA:` paths from normal reply text again while still blocking arbitrary host-local media and document paths, so generated media keep delivering without reopening host-path injection holes.",
-      "Gateway/status and containers: auto-bind to `0.0.0.0` inside Docker and Podman environments, and probe local TLS gateways over `wss://` with self-signed fingerprint forwarding so container startup and loopback TLS status checks work again. (#61818, #61935) Thanks @openperf and contributors.",
-      "Gateway/OpenAI-compatible HTTP: abort in-flight `/v1/chat/completions` and `/v1/responses` turns when clients disconnect so abandoned HTTP requests stop wasting agent runtime. (#54388) Thanks @Lellansin.",
-      "macOS/gateway version: strip trailing commit metadata from CLI version output before semver parsing so the Mac app recognizes installed gateway versions like `OpenClaw 2026.4.2 (d74a122)` again. (#61111) Thanks @oliviareid-svg.",
-      "Sessions/model selection: resolve the explicitly selected session model separately from runtime fallback resolution so session status and live model switching stay aligned with the chosen model.",
-      "Discord/ACP bindings: canonicalize DM conversation identity across inbound messages, component interactions, native commands, and current-conversation binding resolution so `--bind here` in Discord DMs keeps routing follow-up replies to the bound agent instead of falling back to the default agent.",
-      "Discord: recover forwarded referenced message text and attachments when snapshots are missing, use `ws://` again for gateway monitor sockets, stop forcing a hardcoded temperature for Codex-backed auto-thread titles, and harden voice receive recovery so rAPId speaker restarts keep their next utterance. (#41536, #61670) Thanks @artwalker and contributors.",
-      "Slack/thread mentions: 添加 `channels.slack.thread.req界面reExplicitMention` so Slack channels that already req界面re mentions can also req界面re explicit `@bot` mentions inside bot-participated threads. (#58276) Thanks @praktika-engineer.",
-      "Slack/threading: keep legacy thread stickiness for real replies when older callers omit `isThreadReply`, while still honoring `replyToMode` for Slack's auto-created top-level `thread_ts`. (#61835) Thanks @kaonash.",
-      "Slack/media: keep attachment downloads on the SSRF-guarded dispatcher path so Slack media fetching works on Node 22 without dropping pinned transport enforcement. (#62239) Thanks @openperf.",
-      "Matrix/onboarding: 添加 an invite auto-join setup step with explicit off warnings and strict stable-target validation so new Matrix accounts stop silently ignoring invited rooms and fresh DM-style invites unless operators opt in. (#62168) Thanks @gumadeiras.",
-      "Matrix/formatting: preserve multi-paragraph and loose-list rendering in Element so numbered and bulleted Markdown keeps their content attached to the correct list item. (#60997) Thanks @gucasbrg.",
-      "Telegram/doctor: keep top-level access-control fallback in place during multi-account normalization while still promoting legacy default auth into `accounts.default`, so existing named bots keep inherited allowlists without dropping the legacy default bot. (#62263) Thanks @obviyus.",
-      "插件s/loaders: centralize bundled `dist/**` Jiti native-load policy and keep channel, public-surface, facade, and config-metadata loader seams off native Jiti on Windows so onboarding and configure flows stop tripping `ERR_UN支持ED_ESM_URL_SCHEME`. (#62286) Thanks @chen-zhang-cs-code.",
-      "插件s/channels: keep bundled channel artifact and secret-contract loading stable under lazy loading, preserve 插件-schema defaults during install, and 修复 Windows `file://` plus native-Jiti 插件 loader paths so onboarding, doctor, `openclaw secret`, and bundled 插件 installs work again. (#61832, #61836, #61853, #61856) Thanks @Zeesejo and contributors.",
-      "插件s/ClawHub: verify downloaded 插件 archives against version metadata SHA-256, fail closed when archive integrity metadata is missing or malformed, and tighten fallback ZIP verification so 插件 installs cannot proceed on mismatched or incomplete ClawHub package metadata. (#60517) Thanks @mappel-nv.",
-      "插件s/provider hooks: stop recursive provider snapshot loads from overflowing the stack during 插件 initialization, while still preserving cached nested provider-hook results. (#61922, #61938, #61946, #61951)",
-      "Docker/插件s: stop forcing bundled 插件 discovery to `/app/extensions` in runtime images so packaged installs use compiled `dist/extensions` artifacts again and Node 24 containers do not boot through source-only 插件 entry paths. 修复es #62044. (#62316) Thanks @gumadeiras.",
-      "Providers/Ollama: honor the selected provider's `baseUrl` during streaming so multi-Ollama setups stop routing every stream to the first configured Ollama endpoint. (#61678)",
-      "Providers/Ollama: stop warning that Ollama could not be reached when discovery only sees empty default local stubs, while still keeping real explicit Ollama overrides loud when the endpoint is unreachable.",
-      "Providers/xAI: recognize `API.grok.x.ai` as an xAI-native endpoint again and keep legacy `x_search` auth resolution working so older xAI web-search configs continue to load. (#61377) Thanks @jjjojoj.",
-      "Providers/Mistral: send `reasoning_effort` for `mistral/mistral-small-latest` (Mistral Small 4) with thinking-level mapping, and mark the catalog entry as reasoning-capable so adjustable reasoning matches Mistral’s Chat Completions API. (#62162) Thanks @neeravmakwana.",
-      "OpenAI TTS/Groq: send `wav` to Groq-compatible speech endpoints, honor explicit `responseFormat` overrides on OpenAI-compatible paths, and only mark voice-note output as voice-compatible when the actual format is `opus`. (#62233) Thanks @neeravmakwana.",
-      "Tools/web_fetch and web_search: 修复 `TypeError: fetch failed` caused by undici 8.0 enabling HTTP/2 by default; pinned SSRF-guard dispatchers now explicitly set `allowH2: false` to restore HTTP/1.1 behavior and keep the custom DNS-pinning lookup compatible. (#61738, #61777) Thanks @zozo123.",
-      "Tools/web search/Exa: show Exa Search in onboarding and configure provider pickers again by marking the bundled Exa provider as setup-visible. Thanks @vincentkoc.",
-      "Memory/vector recall: surface explicit warnings when `sqlite-vec` is unavailable or vector writes are degraded, and strip managed Light Sleep and REM blocks before daily-note ingestion so memory indexing and dreaming stop reporting false-success or re-ingesting staged output. (#61720) Thanks @MonkeyLeeT.",
-      "Memory/dreaming: make Dreams config reads and writes respect the selected memory slot 插件 instead of always targeting `memory-core`. (#62275) Thanks @SnowSky1.",
-      "QQ Bot/media: route gateway-side attachment and fallback downloads through guarded QQ/Tencent HTTPS fetches so QQ media handling no longer follows arbitrary remote hosts.",
-      "Browser/remote CDP: retry the DevTools websocket once after remote browser restarts so healthy remote browser profiles do not fail availability checks during CDP warm-up. (#57397) Thanks @ThanhNguyxn07.",
-      "界面/light mode: target both root and nested WebKit scrollbar thumbs in the light theme so page-level and container scrollbars stay visible on light backgrounds. (#61753) Thanks @chziyue.",
-      "Agents/subagents: honor `sessions_spawn(lightContext: true)` for spawned subagent runs by preserving lightweight bootstrap context through the gateway and embedded runner instead of silently falling back to full workspace bootstrap injection. (#62264) Thanks @theSamPadilla.",
-      "Cron: load `jobId` into `id` when the on-disk store omits `id`, matching doctor migration and 修复ing `unknown cron job id` for hand-edited `jobs.json`. (#62246) Thanks @neeravmakwana.",
-      "Agents/model fallback: classify minimal HTTP 404 API errors (for example `404 status code (no body)`) as `model_not_found` so assistant failures throw into the fallback chain instead of stopping at the first fallback candidate. (#62119) Thanks @neeravmakwana.",
-      "BlueBubbles/network: respect explicit private-network opt-out for loopback and private `serverUrl` values across account resolution, status probes, monitor startup, and attachment downloads, while keeping public-host attachment hostname pinning intact. (#59373) Thanks @jpreagan.",
-      "Agents/heartbeat: keep heartbeat runs pinned to the main session so active subagent transcripts are not overwritten by heartbeat status messages. (#61803) Thanks @100yenadmin.",
-      "Agents/heartbeat: respect disabled heartbeat prompt g界面dance so operators can suppress heartbeat prompt instructions without disabling heartbeat runtime behavior.",
-      "Agents/compaction: stop compaction-wait aborts from re-entering prompt failover and replaying completed tool turns. (#62600) Thanks @i-dentifier.",
-      "Approvals/runtime: move native approval lifecycle assembly into shared core bootstrap/runtime seams driven by channel capabilities and runtime contexts, and 移除 the legacy bundled approval fallback wiring. (#62135) Thanks @gumadeiras.",
-      "安全/fetch-guard: stop rejecting operator-configured proxy hostnames against the target-scoped hostname allowlist in SSRF-guarded fetches, restoring proxy-based media downloads for Telegram and other channels. (#62312) Thanks @ademczuk.",
-      "Logging: make `logging.level` and `logging.consoleLevel` honor the documented severity threshold ordering again, and keep child loggers inheriting the parent `minLevel`. (#44646) Thanks @zhumengzhu.",
-      "Agents/sessions_send: pass `threadId` through announce delivery so cross-session notifications land in the correct Telegram forum topic instead of the group's general thread. (#62758) Thanks @jalehman.",
-      "Daemon/systemd: keep sudo systemctl calls scoped to the invoking user when machine-scoped systemctl fails, while still avoiding machine fallback for permission-denied user bus errors. (#62337) Thanks @Aftabbs.",
-      "Docs/i18n: relocalize final localized-page links after translation and 移除 the zh-CN homepage redirect override so localized Mintlify pages resolve to the correct language roots again. (#61796) Thanks @hxy91819.",
-      "Agents/exec: keep timed-out shell-backgrounded commands on the failed path and point long-running jobs to exec background/yield sessions so process polling is only suggested for registered sessions."
-    ]
-  }
-},
-  {
-  "version": "2026.4.5",
-  "date": "2026-04-06",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "Agents/video generation: 添加 the b界面lt-in `video_generate` tool so agents can create videos through configured providers and return the generated media directly in the reply.",
-      "Agents/music generation: ignore un支持ed optional hints such as `durationSeconds` with a warning instead of hard-failing requests on providers like Google Lyria.",
-      "Providers/Comfy界面: 添加 a bundled `comfy` workflow media 插件 for local Comfy界面 and Comfy Cloud workflows, including shared `image_generate`, `video_generate`, and workflow-backed `music_generate` 支持, with prompt injection, optional reference-image upload, live tests, and output download.",
-      "Tools/music generation: 添加 the b界面lt-in `music_generate` tool with bundled Google (Lyria) and MiniMax providers plus workflow-backed Comfy 支持, including async task tracking and follow-up delivery of finished audio.",
-      "Providers: 添加 bundled Qwen, Fireworks AI, and StepFun providers, plus MiniMax TTS, Ollama Web Search, and MiniMax Search 集成s for chat, speech, and search workflows. (#60032, #55921, #59318, #54648)",
-      "Providers/Amazon Bedrock: 添加 bundled Mantle 支持 plus inference-profile discovery and automatic request-region injection so Bedrock-hosted Claude, GPT-OSS, Qwen, Kimi, GLM, and similar routes work with less manual setup. (#61296, #61299) Thanks @wirjo.",
-      "Control 界面/multilingual: 添加 localized control 界面 支持 for Simplified Chinese, Traditional Chinese, Brazilian Portuguese, German, Spanish, Japanese, Korean, French, Turkish, Indonesian, Polish, and Ukrainian. Thanks @vincentkoc.",
-      "插件s: 添加 插件-config T界面 prompts to g界面ded onboarding/setup flows, and 添加 `openclaw 插件s install --force` so existing 插件 and hook-pack targets can be replaced without using the dangerous-code override flag. (#60590, #60544)",
-      "Control 界面/skills: 添加 ClawHub search, detail, and install flows directly in the Skills panel. (#60134) Thanks @samzong.",
-      "iOS/exec approvals: 添加 generic APNs approval notifications that open an in-app exec approval modal, fetch command details only after authenticated operator reconnect, and clear stale notification state when the approval resolves. (#60239) Thanks @ngutman.",
-      "Matrix/exec approvals: 添加 Matrix-native exec approval prompts with account-scoped approvers, channel-or-DM delivery, and room-thread aware resolution handling. (#58635) Thanks @gumadeiras.",
-      "Channels/context visibility: 添加 configurable `contextVisibility` per channel (`all`, `allowlist`, `allowlist_quote`) so supplemental quote, thread, and fetched history context can be filtered by sender allowlists instead of always passing through as received.",
-      "Providers/request overrides: 添加 shared model and media request transport overrides across OpenAI-, Anthropic-, Google-, and compatible provider paths, including headers, auth, proxy, and TLS controls. (#60200)",
-      "Providers/OpenAI: 添加 forward-compat `openai-codex/gpt-5.4-mini`, an opt-in GPT personality, and provider-owned GPT-5 prompt contributions so Codex/GPT runs stay cache-stable and compatible with bundled catalog lag.",
-      "Agents/Claude CLI: expose OpenClaw tools to background Claude CLI runs through a loopback MCP bridge and switch bundled runs to stdin + `stream-json` partial-message streaming so prompts stop riding argv, long replies show live progress, and final session/usage metadata still land cleanly. (#35676) Thanks @mylukin.",
-      "ACPX/runtime: embed the ACP runtime directly in the bundled `acpx` 插件, 移除 the extra external ACP CLI hop, harden live ACP session binding and reuse, and 添加 a generic `reply_dispatch` hook so bundled 插件s like ACPX can own reply interception without hardcoded ACP paths in core auto-reply routing. (#61319)",
-      "Agents/progress: 添加 experimental structured plan 更新s and structured execution item events so compatible 界面s can show clearer step-by-step progress during long-running runs.",
-      "Providers/Anthropic: 移除 the Claude CLI backend and setup-token from new onboarding, keep existing configured legacy profiles runnable, and have `openclaw doctor` repair or 移除 stale `anthropic:claude-cli` state during migration.",
-      "Tools/video generation: 添加 bundled xAI (`grok-imagine-video`), Alibaba Model Studio Wan, and Runway video providers, plus live-test/default model wiring for all three.",
-      "Memory/search: 添加 Amazon Bedrock embeddings for Titan, Cohere, Nova, and TwelveLabs models, with AWS credential-chain auto-detection for `provider: \"auto\"` and provider-specific dimension controls. Thanks @wirjo.",
-      "Providers/Amazon Bedrock Mantle: generate bearer tokens from the AWS credential chain so Mantle auto-discovery can use IAM auth without manually exporting `AWS_BEARER_TOKEN_BEDROCK`. Thanks @wirjo.",
-      "Memory/dreaming (experimental): 添加 weighted short-term recall promotion, a `/dreaming` command, Dreams 界面, multilingual conceptual tagging, and doctor/status repair 支持, while 重构ing dreaming from competing modes into three cooperative phases (light, deep, REM) with independent schedules and recovery behavior so durable memory promotion can run in the background with less manual setup. (#60569, #60697) Thanks @vignesh07.",
-      "Memory/dreaming: 添加 configurable aging controls (`recencyHalfLifeDays`, `maxAgeDays`) plus optional verbose logging so operators can tune recall decay and inspect promotion decisions more easily.",
-      "Memory/dreaming: 添加 REM preview tooling (`openclaw memory rem-harness`, `promote-explain`), surface possible lasting truths during REM staging, and make deep promotion replay-safe so reruns reconcile instead of duplicating `MEMORY.md` entries.",
-      "Memory/dreaming: write dreaming trail content to top-level `dreams.md` instead of daily memory notes, 更新 `/dreaming` help text to point there, and keep `dreams.md` available for explicit reads without pulling it into default recall. Thanks @davemorin.",
-      "Memory/dreaming: 添加 the Dream Diary surface in Dreams, simplify user-facing dreaming config to `enabled` plus optional `frequency`, treat phases as 实现ation detail in docs/界面, and keep the lobster animation visible above diary content. Thanks @vignesh07.",
-      "Prompt caching: keep prompt pre修复es more reusable across transport fallback, deterministic MCP tool ordering, compaction, embedded image history, normalized system-prompt fingerprints, `openclaw status --verbose` cache diagnostics, and the removal of duplicate in-band tool inventories from agent system prompts so follow-up turns hit cache more reliably. (#58036, #58037, #58038, #59054, #60603, #60691) Thanks @bcherny and @vincentkoc.",
-      "Agents/cache: diagnostics: 添加 prompt-cache break diagnostics, trace live cache scenarios through embedded runner paths, and show cache reuse explicitly in `openclaw status --verbose`. Thanks @vincentkoc.",
-      "Agents/cache: stabilize cache-relevant system prompt fingerprints by normalizing eq界面valent structured prompt whitespace, line endings, hook-添加ed system context, and runtime capability ordering so semantically unchanged prompts reuse KV/cache more reliably. Thanks @vincentkoc.",
-      "Agents/tool prompts: 移除 the duplicate in-band tool inventory from agent system prompts so tool-calling models rely on the structured tool definitions as the single source of truth, improving prompt 稳定性 and reducing stale tool g界面dance.",
-      "Config/schema: enrich the exported `openclaw config schema` JSON Schema with field titles and descriptions so editors, agents, and other schema consumers receive the same config help metadata. (#60067) Thanks @solavrc.",
-      "Providers/CLI: 移除 bundled CLI text-provider backends and the `agents.defaults.cliBackends` surface, while keeping ACP harness sessions and Gemini media understanding on the native bundled providers.",
-      "Matrix/exec approvals: clarify unavailable-approval replies so Matrix no longer claims chat approvals are un支持ed when native exec approvals are merely unconfigured. (#61424) Thanks @gumadeiras.",
-      "Docs/IRC: replace public IRC hostname examples with `irc.example.com` and recommend private servers for bot coordination while listing common public networks for intentional use.",
-      "Memory/dreaming: group nearby daily-note lines into short coherent chunks before staging them for dreaming, so one-off context from recent notes reaches REM/deep with better evidence and less line-level noise.",
-      "Memory/dreaming: drop generic date/day headings from daily-note chunk pre修复es while keeping meaningful section labels, so staged snippets stay cleaner and more reusable. (#61597) Thanks @mbelinky.",
-      "插件s/Lobster: run bundled Lobster workflows in process instead of spawning the external CLI, reducing transport overhead and unblocking native runtime 集成. (#61523) Thanks @mbelinky.",
-      "插件s/Lobster: harden managed resume validation so invalid TaskFlow resume calls fail earlier, and memoize embedded runtime loading per runner while keeping failed loads retryable. (#61566) Thanks @mbelinky."
-    ],
-    "improvements": [
-      "Config: 移除 legacy public config aliases such as `talk.voiceId` / `talk.APIKey`, `agents.*.sandbox.perSession`, `browser.ssrfPolicy.allowPrivateNetwork`, `hooks.internal.handlers`, and channel/group/room `allow` toggles in favor of the canonical public paths and `enabled`, while keeping load-time 兼容性 and `openclaw doctor --修复` migration 支持 for existing configs. (#60726) Thanks @vincentkoc."
-    ],
-    "bugfixes": [
-      "安全: preserve restrictive 插件-only tool allowlists, req界面re owner access for `/allowlist 添加` and `/allowlist 移除`, fail closed when `before_tool_call` hooks crash, block browser SSRF redirect bypasses earlier, and keep non-interactive auth-choice inference scoped to bundled and already-trusted 插件s. (#58476, #59836, #59822, #58771, #59120) Thanks @eleqtrizit and @pgondhi987.",
-      "Providers/OpenAI: make GPT-5 and Codex runs act sooner with lower-verbosity defaults, visible progress during tool work, and a one-shot retry when a turn only narrates the plan instead of taking action.",
-      "Providers/OpenAI and reply delivery: preserve native `reasoning.effort: \"none\"` and strict schemas where 支持ed, 添加 GPT-5.4 assistant `phase` metadata across replay and the Gateway `/v1/responses` layer, and keep commentary buffered until `final_answer` so web chat, session previews, embedded replies, and Telegram partials stop leaking planning text. 修复es #59150, #59643, #61282.",
-      "Telegram: 修复 current-model checks in the model picker, HTML-format non-default `/model` confirmations, explicit topic replies, persisted reaction ownership across restarts, caption-media placeholder and `file_id` preservation on download failure, and upgraded-install inbound image reads. (#60384, #60042, #59634, #59207, #59948, #59971) Thanks @sfuminya, @GitZhangChi, @dashhuang, @samzong, @v1p0r, and @neeravmakwana.",
-      "Telegram: restore DM voice-note preflight transcription so direct-message audio stops arriving as raw `<media:audio>` placeholders. (#61008) Thanks @manueltarouca.",
-      "Telegram/reasoning: only create a Telegram reasoning preview lane when the session is explicitly `reasoning:stream`, so hidden `<think>` traces from streamed replies stop surfacing as chat previews on normal sessions. Thanks @vincentkoc.",
-      "Telegram/native command menu: trim long menu descriptions before dropping commands so sub-100 command sets can still fit Telegram's payload budget and keep more `/` entries visible. (#61129) Thanks @neeravmakwana.",
-      "Discord: keep REST, webhook, and monitor traffic on the configured proxy, preserve component-only media sends, honor `@everyone` and `@here` mention gates, keep ACK reactions on the active account, and split voice connect/playback timeouts so auto-join is more reliable. (#57465, #60361, #60345) Thanks @geekhuashan.",
-      "Discord/reply tags: strip leaked `[[reply_to_current]]` control tags from preview text and honor explicit reply-tag threading during final delivery, so Discord replies stay attached to the triggering message instead of printing reply metadata into chat.",
-      "Discord/replies: replace the unshipped `replyToOnlyWhenBatched` flag with `replyToMode: \"batched\"` so native reply references only attach on debounced multi-message turns while explicit reply tags still work.",
-      "Discord/image generation: include the real generated `MEDIA:` paths in tool output, avoid duplicate plain-output media requeueing, and persist volatile workspace-generated media into durable outbound media before final reply delivery so generated image replies stop pointing at missing local files.",
-      "Slack: route live DM replies back to the concrete inbound DM channel while keeping persisted routing metadata user-scoped, so normal assistant replies stop disappearing when pairing and system messages still arrive. (#59030) Thanks @afurm.",
-      "WhatsApp: restore `channels.whatsapp.blockStreaming` and reset watchdog timeouts after reconnect so q界面et chats stop falling into reconnect loops. (#60007, #60069) Thanks @MonkeyLeeT and @mcaxtr.",
-      "Android/Talk Mode: cancel in-flight `talk.speak` playback when speech is explicitly stopped, and restore spoken replies on both node-scoped and gateway-backed sessions by keeping reply routing and embedded transport overrides aligned with the current playback path. (#60306, #61164, #61214)",
-      "Voice-call/OpenAI: pass full 插件 config into realtime transcription provider resolution so streaming calls can discover the bundled OpenAI realtime transcription provider again. 修复es #60936. Thanks @sliekens and @vincentkoc.",
-      "Matrix/exec approvals: anchor seeded approval reactions to the primary Matrix prompt event, resolve them from event metadata instead of prompt text, and clean up chunked approval prompts correctly. (#60931) Thanks @gumadeiras.",
-      "Matrix: recover more reliably when secret storage or recovery keys are missing by recreating secret storage during repair and backup reset, hold crypto snapshot locks during persistence, and surface explicit too-large attachment markers. (#59846, #59851, #60599, #60289) Thanks @al3mart, @emonty, and @efe-arv.",
-      "Matrix/DM sessions: 添加 `channels.matrix.dm.sessionScope`, shared-session collision notices, and aligned outbound session reuse so separate Matrix DM rooms can keep distinct context when configured. (#61373) Thanks @gumadeiras.",
-      "Matrix: move legacy top-level `avatarUrl` into the default account during multi-account promotion and keep env-backed account setup avatar config persisted. (#61437) Thanks @gumadeiras.",
-      "MS Teams: download inline DM images via Graph API and preserve channel reply threading in proactive fallback. (#52212, #55198) Thanks @Ted-developer and @hyojin.",
-      "MS Teams: replace the deprecated Teams SDK Http插件 stub with `httpServerAdapter` so recurring gateway deprecation warnings stop firing and the Express 5 兼容性 workaround stays on the 支持ed SDK path. (#60939) Thanks @coolramukaka-sys.",
-      "Control 界面/chat: 添加 a per-session thinking-level picker in the chat header and mobile chat settings, and keep the browser bundle on 界面-local thinking/session-key helpers so Safari no longer crashes on Node-only imports before rendering chat controls.",
-      "Sandbox/SSH: reject hardlinked files during cross-device rename fallback so EXDEV file copies preserve the same pinned file-boundary checks as direct reads.",
-      "Control 界面: keep Stop visible during tool-only execution, preserve pending-send busy state, and clear stale ClawHub search results as soon as the query changes. (#54528, #59800, #60267) Thanks @chziyue and @frankekn.",
-      "Control 界面/avatar: honor `界面.assistant.avatar` when serving `/avatar/:agentId` so Appearance 界面 avatar paths stop falling back to initials placeholders. (#60778) Thanks @hannasdev.",
-      "Control 界面/cron: highlight the Cron refresh button while refresh is in flight so the page's loading state stays visible even when prior data remains on screen. (#60394) Thanks @coder-zhuzm.",
-      "Control 界面/Overview: prevent gateway access token/password visibility toggle buttons from overlapping their inputs at narrow widths. (#56924) Thanks @bbddbb1.",
-      "Auto-reply: unify reply lifecycle ownership across preflight compaction, session rotation, CLI-backed runs, and gateway restart handling so `/stop` and same-session overlap checks target the right active turn and restart-interrupted turns return the restart notice instead of being silently dropped. (#61267) Thanks @dutifulbob.",
-      "Reply delivery: prevent duplicate block replies on `text_end` channels so providers that emit explicit text-end boundaries no longer double-send the same final message. (#61530)",
-      "Gateway/startup: default `gateway.mode` to `local` when unset, detect PID recycling in gateway lock files on Windows and macOS, and show startup progress so healthy restarts stop getting blocked by stale locks. (#54801, #60085, #59843) Thanks @BradGroux and @TonyDerek-dot.",
-      "Gateway/macOS: let launchd `KeepAlive` own in-process gateway restarts again, 添加ing a short supervised-exit delay so rAPId restarts avoid launchd crash-loop unloads while `openclaw gateway restart` still reports real LaunchAgent errors synchronously.",
-      "Gateway/macOS: re-bootstrap the LaunchAgent if `launchctl kickstart -k` unloads it during restart so failed restarts do not leave the gateway unmanaged until manual repair.",
-      "Gateway/macOS: recover installed-but-unloaded LaunchAgents during `openclaw gateway start` and `restart`, while still preferring live unmanaged gateways during restart recovery. (#43766) Thanks @HenryC-3.",
-      "Gateway/Windows scheduled tasks: preserve Task Scheduler settings on reinstall, fail loudly when `/Run` does not start, and report fast failed restarts accurately instead of pretending they timed out after 60 seconds. (#59335) Thanks @tmimmanuel.",
-      "Windows/restart: fall back to the installed Startup-entry launcher when the scheduled task was never registered, so `/restart` can relaunch the gateway on Windows setups where `schtasks` install fell back during onboarding. (#58943) Thanks @imechZhangLY.",
-      "Windows/restart: clean up stale gateway listeners before Windows self-restart and treat listener and argv probe failures as inconclusive, so scheduled-task relaunch no longer falls into an `E添加RINUSE` retry loop. (#60480) Thanks @arifahmedjoy.",
-      "更新/npm: prefer the npm binary that owns the installed global OpenClaw pre修复 so mixed Homebrew-plus-nvm setups 更新 the right install. (#60153) Thanks @jayeshp19.",
-      "Agents/music and video generation: 添加 `tools.media.asyncCompletion.directSend` as an opt-in direct-delivery path for finished async media tasks, while keeping the legacy requester-session wake/model-delivery flow as the default.",
-      "CLI/skills JSON: route `skills list --json`, `skills info --json`, and `skills check --json` output to stdout instead of stderr so machine-readable consumers receive JSON on the expected stream again. (#60914; 修复es #57599; landed from contributor PR #57611 by @Aftabbs) Thanks @Aftabbs.",
-      "CLI/Commander: preserve Commander-computed exit codes for argument and help-error paths, and cover the user-argv parse mode in the regression tests so invalid CLI invocations no longer report success when exits are intercepted. (#60923) Thanks @Linux2010.",
-      "Cron: replay interrupted recurring jobs on the first gateway restart instead of waiting for a second restart. (#60583) Thanks @joelnishanth.",
-      "Cron: send failure notifications through the job's primary delivery channel using the same session context as successful delivery when no explicit `failureDestination` is configured. (#60622) Thanks @artwalker.",
-      "Exec/remote skills: stop advertising `exec host=node` when the current exec policy cannot route to a node, and clarify blocked exec-host override errors with both the requested host and allowed config path.",
-      "Agents/Claude CLI/安全: clear inherited Claude Code config-root and 插件-root env overrides like `CLAUDE_CONFIG_DIR` and `CLAUDE_CODE_插件_*`, so OpenClaw-launched Claude CLI runs cannot be silently pointed at an alternate Claude config/插件 tree with different hooks, 插件s, or auth context. Thanks @vincentkoc.",
-      "Agents/Claude CLI/安全: clear inherited Claude Code provider-routing and managed-auth env overrides, and mark OpenClaw-launched Claude CLI runs as host-managed, so Claude CLI backdoor sessions cannot be silently redirected to proxy, Bedrock, Vertex, Foundry, or parent-managed token contexts. Thanks @vincentkoc.",
-      "Agents/Claude CLI/安全: force host-managed Claude CLI backdoor runs to `--setting-sources user`, even under custom backend arg overrides, so repo-local `.claude` project/local settings, hooks, and 插件 discovery do not silently execute inside non-interactive OpenClaw sessions. Thanks @vincentkoc.",
-      "Agents/Claude CLI: treat malformed bare `--permission-mode` backend overrides as missing and fail safe back to `bypassPermissions`, so custom `cliBackends.claude-cli.args` 安全 config cannot accidentally consume the next flag as a bogus permission mode. Thanks @vincentkoc.",
-      "Gateway/device pairing: req界面re non-admin paired-device sessions to manage only their own device for token rotate/revoke and paired-device removal, blocking cross-device token theft inside pairing-scoped sessions. (#50627) Thanks @coygeek.",
-      "Gateway/插件 routes: keep gateway-auth 插件 runtime routes on write-only fallback scopes unless a trusted-proxy caller explicitly declares narrower `x-openclaw-scopes`, so 插件 HTTP handlers no longer mint admin-level runtime scopes on missing or untrusted HTTP scope headers. (#59815) Thanks @pgondhi987.",
-      "B界面ld/types: 修复 the Node `createReq界面re(...)` helper typing so provider-runtime lazy loads compile cleanly again and `pnpm b界面ld` no longer fails in the Pi embedded provider error-pattern path.",
-      "Gateway/安全: scope loopback browser-origin auth throttling by normalized origin so one localhost Control 界面 tab cannot lock out a different localhost browser origin after repeated auth failures.",
-      "Gateway/auth: serialize async shared-secret auth attempts per client so concurrent Tailscale-capable failures cannot overrun the intended auth rate-limit budget. Thanks @Telecaster2147.",
-      "Device pairing/安全: keep non-operator device scope checks bound to the requested role pre修复 so bootstrap verification cannot redeem `operator.*` scopes through `node` auth. (#57258) Thanks @jlapenna.",
-      "Device pairing: reject rotating device tokens into roles that were never approved during pairing, and keep reconnect role checks bounded to the paired device's approved role set. (#60462) Thanks @eleqtrizit.",
-      "Gateway/device auth: reuse cached device-token scopes only for cached-token reconnects, while keeping explicit `deviceToken` scope requests and empty-cache fallbacks intact so reconnects preserve `operator.read` without breaking explicit auth flows. (#46032) Thanks @caicongyang.",
-      "Mobile pairing/安全: fail closed for internal `/pair` setup-code issuance, cleanup, and approval paths when gateway pairing scopes are missing, and keep approval-time requested-scope enforcement on the internal command path. (#55996) Thanks @coygeek.",
-      "Mobile pairing/bootstrap: keep QR bootstrap handoff tokens bounded to the mobile-safe contract so node handoff stays unscoped and operator handoff drops mixed `node.*`, `operator.admin`, and `operator.pairing` scopes.",
-      "Mobile pairing/Android: tighten secure endpoint handling so Tailscale and public remote setup reject cleartext endpoints, private LAN pairing still works, merged-role approvals mint both node and operator device tokens, and bootstrap tokens survive node auto-pair until operator approval finishes. (#60128, #60208, #60221) Thanks @obviyus.",
-      "Android/canvas 安全: req界面re exact normalized A2界面 URL matches before forwarding canvas bridge actions, rejecting query mismatches and descendant paths while still allowing fragment-only A2界面 navigation.",
-      "Synology Chat/安全: default low-level HTTPS helper TLS verification to on so helper/API defaults match the shipped safe account default, and only explicit `allowInsecureSsl: true` opts out.",
-      "Synology Chat/安全: route webhook token comparison through the shared constant-time secret helper for consistency with other bundled 插件s.",
-      "插件s/marketplace: block remote marketplace symlink escapes without breaking ordinary local marketplace install paths. (#60556) Thanks @eleqtrizit.",
-      "Telegram/local Bot API: honor `channels.telegram.APIRoot` for buffered media downloads, 添加 `channels.telegram.network.dangerouslyAllowPrivateNetwork` for trusted fake-IP setups, and req界面re `channels.telegram.trustedLocalFileRoots` before reading absolute Bot API `file_path` values. (#59544, #60705) Thanks @SARAMALI15792 and @obviyus.",
-      "Outbound/sanitizer: strip leaked `<tool_call>`, `<function_calls>`, and model special tokens from shared user-visible assistant text, including truncated tool-call streams, so internal scaffolding no longer bleeds into replies across surfaces. (#60619) Thanks @oliviareid-svg.",
-      "Agents/errors: surface an explicit disk-full message when local session or transcript writes fail with `ENOSPC`/`disk full`, so those runs stop degrading into opaque `NO_REPLY`-style failures. Thanks @vincentkoc.",
-      "Exec approvals: 移除 heuristic command-obfuscation gating from host exec so gateway and node runs rely on explicit policy, allowlist, and strict inline-eval rules only.",
-      "Agents/tool results: cap live tool-result persistence and overflow-recovery truncation at 40k characters so oversized tool output stays bounded without discarding recent context entirely.",
-      "Discord/video replies: split text-plus-video deliveries into a text reply followed by a media-only send, and let live provider auth checks honor manifest-declared API key env vars like `MODELSTUDIO_API_KEY`.",
-      "Config/All Settings: keep the raw config view intact when sensitive fields are blank instead of corrupting or dropping the rendered snapshot. (#28214) Thanks @solodmd.",
-      "插件 SDK/facades: back-fill bundled 插件 facade sentinels before 插件-id tracking re-enters config loading, so CLI/provider startup no longer crashes with `shouldNormalizeGoogleProviderConfig is not a function` or other empty-facade reads during bundled 插件 re-entry. Thanks @adam91holt.",
-      "插件s/facades: back-fill facade sentinels before tracked-插件 resolution re-enters config loading, so facade exports stay defined during circular provider normalization. (#61180) Thanks @adam91holt.",
-      "QA lab: restore typed mock OpenAI gateway config wiring so QA-lab config helpers compile cleanly again and `pnpm check` / `pnpm b界面ld` stay green.",
-      "Discord/image generation: include the real generated `MEDIA:` paths in tool output and avoid duplicate plain-output media requeueing so Discord image replies stop pointing at missing local files.",
-      "Slack: route live DM replies back to the concrete inbound DM channel while keeping persisted routing metadata user-scoped, so normal assistant replies stop disappearing when pairing and system messages still arrive. (#59030) Thanks @afurm.",
-      "Discord/reply tags: strip leaked `[[reply_to_current]]` control tags from preview text and honor explicit reply-tag threading during final delivery, so Discord replies stay attached to the triggering message instead of printing reply metadata into chat.",
-      "Telegram: 修复 current-model checks in the model picker, HTML-format non-default `/model` confirmations, explicit topic replies, persisted reaction ownership across restarts, caption-media placeholder and `file_id` preservation on download failure, and upgraded-install inbound image reads. (#60384, #60042, #59634, #59207, #59948, #59971) Thanks @sfuminya, @GitZhangChi, @dashhuang, @samzong, @v1p0r, and @neeravmakwana.",
-      "Telegram: restore DM voice-note preflight transcription so direct-message audio stops arriving as raw `<media:audio>` placeholders. (#61008) Thanks @manueltarouca.",
-      "Telegram/reasoning: only create a Telegram reasoning preview lane when the session is explicitly `reasoning:stream`, so hidden `<think>` traces from streamed replies stop surfacing as chat previews on normal sessions. Thanks @vincentkoc.",
-      "Telegram/native command menu: trim long menu descriptions before dropping commands so sub-100 command sets can still fit Telegram's payload budget and keep more `/` entries visible. (#61129) Thanks @neeravmakwana.",
-      "Feishu/reasoning: only expose streamed reasoning previews when the session is explicitly `reasoning:stream`, so hidden reasoning traces do not surface on normal streaming sessions. Thanks @vincentkoc.",
-      "Discord: keep REST, webhook, and monitor traffic on the configured proxy, preserve component-only media sends, honor `@everyone` and `@here` mention gates, keep ACK reactions on the active account, and split voice connect/playback timeouts so auto-join is more reliable. (#57465, #60361, #60345) Thanks @geekhuashan.",
-      "WhatsApp: restore `channels.whatsapp.blockStreaming` and reset watchdog timeouts after reconnect so q界面et chats stop falling into reconnect loops. (#60007, #60069) Thanks @MonkeyLeeT and @mcaxtr.",
-      "Memory: keep `memory-core` b界面ltin embedding registration on the already-registered path so selecting `memory-core` no longer recurses through 插件 discovery and crashes during startup. (#61402) Thanks @ngutman.",
-      "Agents/tool results: keep large `read` outputs visible longer, preserve the latest `read` output when older tool output can absorb the overflow budget, and fall back to Pi's normal overflow compaction/retry path before replacing a fresh `read` with a compacted stub. Thanks @vincentkoc.",
-      "Memory/QMD: prefer modern `qmd collection 添加 --glob`, accept newer single-line JSON hit metadata while keeping legacy line fields, refresh QMD docs/doctor install g界面dance and model-override g界面dance, and keep older QMD releases working. Thanks @vincentkoc.",
-      "MS Teams: download inline DM images via Graph API and preserve channel reply threading in proactive fallback. (#52212, #55198) Thanks @Ted-developer and @hyojin.",
-      "MS Teams: replace the deprecated Teams SDK Http插件 stub with `httpServerAdapter` so recurring gateway deprecation warnings stop firing and the Express 5 兼容性 workaround stays on the 支持ed SDK path. (#60939) Thanks @coolramukaka-sys.",
-      "Matrix/exec approvals: anchor seeded approval reactions to the primary Matrix prompt event, resolve them from event metadata instead of prompt text, and clean up chunked approval prompts correctly. (#60931) Thanks @gumadeiras.",
-      "Matrix: recover more reliably when secret storage or recovery keys are missing by recreating secret storage during repair and backup reset, hold crypto snapshot locks during persistence, and surface explicit too-large attachment markers. (#59846, #59851, #60599, #60289) Thanks @al3mart, @emonty, and @efe-arv.",
-      "Android/Talk Mode: cancel in-flight `talk.speak` playback when speech is explicitly stopped, so stale replies stop starting after barge-in or manual stop. (#61164) Thanks @obviyus.",
-      "Android/Talk Mode: restore spoken assistant replies on node-scoped sessions by keeping reply routing synced to the resolved node session key and pausing mic capture during reply playback. (#60306) Thanks @MKV21.",
-      "Android/Talk Mode: restore voice replies on gateway-backed talk mode sessions by updating embedded runner transport overrides to the current agent transport API. (#61214) Thanks @obviyus.",
-      "Voice-call/OpenAI: pass full 插件 config into realtime transcription provider resolution so streaming calls can discover the bundled OpenAI realtime transcription provider again. 修复es #60936. Thanks @sliekens and @vincentkoc.",
-      "Control 界面/chat: 添加 a per-session thinking-level picker in the chat header and mobile chat settings, and keep the browser bundle on 界面-local thinking/session-key helpers so Safari no longer crashes on Node-only imports before rendering chat controls.",
-      "Control 界面: keep Stop visible during tool-only execution, preserve pending-send busy state, and clear stale ClawHub search results as soon as the query changes. (#54528, #59800, #60267) Thanks @chziyue and @frankekn.",
-      "Control 界面/avatar: honor `界面.assistant.avatar` when serving `/avatar/:agentId` so Appearance 界面 avatar paths stop falling back to initials placeholders. (#60778) Thanks @hannasdev.",
-      "Control 界面/cron: highlight the Cron refresh button while refresh is in flight so the page's loading state stays visible even when prior data remains on screen. (#60394) Thanks @coder-zhuzm.",
-      "Control 界面/Overview: prevent gateway access token/password visibility toggle buttons from overlapping their inputs at narrow widths. (#56924) Thanks @bbddbb1.",
-      "CLI/skills JSON: route `skills list --json`, `skills info --json`, and `skills check --json` output to stdout instead of stderr so machine-readable consumers receive JSON on the expected stream again. (#60914; 修复es #57599; landed from contributor PR #57611 by @Aftabbs) Thanks @Aftabbs.",
-      "CLI/Commander: preserve Commander-computed exit codes for argument and help-error paths, and cover the user-argv parse mode in the regression tests so invalid CLI invocations no longer report success when exits are intercepted. (#60923) Thanks @Linux2010.",
-      "Cron: replay interrupted recurring jobs on the first gateway restart instead of waiting for a second restart. (#60583) Thanks @joelnishanth.",
-      "Cron: send failure notifications through the job's primary delivery channel using the same session context as successful delivery when no explicit `failureDestination` is configured. (#60622) Thanks @artwalker.",
-      "Live model switching: only treat explicit user-driven model changes as pending live switches, so fallback rotation, heartbeat overrides, and compaction no longer trip `LiveSessionModelSwitchError` before making an API call. (#60266) Thanks @kiranvk-2011.",
-      "Exec approvals: reuse durable exact-command `allow-always` approvals in allowlist mode so identical reruns stop prompting, and tighten Windows interpreter/path approval handling so wrapper and malformed-path cases fail closed more consistently. (#59880, #59780, #58040, #59182) Thanks @luoyanglang, @SnowSky1, and @pgondhi987.",
-      "Node exec approvals: keep node-host `system.run` approvals bound to the prepared execution plan across async forwarding, so mutable script operands still get approval-time binding and drift revalidation instead of dropping back to unbound execution.",
-      "Agents/exec approvals: let `exec-approvals.json` agent 安全 override stricter gateway tool defaults so approved subagents can use `安全: “full”` without falling back to allowlist enforcement again. (#60310) Thanks @lml2468.",
-      "Agents/exec: restore `host=node` routing for node-pinned and `host=auto` sessions, while still blocking sandboxed `auto` sessions from jumping to gateway. (#60788) Thanks @openperf.",
-      "Exec/heartbeat: use the canonical `exec-event` wake reason for `notifyOnExit` so background exec completions still trigger follow-up turns when `HEARTBEAT.md` is empty or comments-only. (#41479) Thanks @rstar327.",
-      "Heartbeat: skip wake delivery when the target session lane is already busy so the pending event is retried instead of getting drained too early. (#40526) Thanks @lucky7323.",
-      "Group chats/agent prompts: tell models to minimize empty lines and use normal chat-style spacing so group replies avoid document-style blank-line formatting.",
-      "Providers/OpenAI GPT: treat short approval turns like `ok do it` and `go ahead` as immediate action turns, and trim overly memo-like GPT-5 chat confirmations so OpenAI replies stay shorter and more conversational by default.",
-      "Providers/OpenAI Codex: split native `contextWindow` from runtime `contextTokens`, keep the default effective cap at `272000`, and expose a per-model `contextTokens` override on `models.providers.*.models[]`.",
-      "Providers/OpenAI-compatible WS: compute fallback token totals from normalized usage when providers omit or zero `total_tokens`, so DashScope-compatible sessions stop storing zero totals after alias normalization. (#54940) Thanks @lyfuci.",
-      "Agents/OpenAI: mark Claude-compatible file tool schemas as `添加itionalProperties: false` so direct OpenAI GPT-5 routes stop rejecting the `read` tool with invalid strict-schema errors.",
-      "Agents/OpenAI: fall back to `strict: false` for native OpenAI tool calls when a tool schema is not strict-compatible, and normalize empty-object tool schemas to include `req界面red: []`, so direct GPT-5 routes stop failing with invalid strict-schema errors like missing `path` in `req界面red`.",
-      "Agents/GPT: 添加 explicit work-item lifecycle events for embedded runs, use them to surface real progress more reliably, and stop counting tool-started turns as planning-only retries.",
-      "插件s/OpenAI: enable `gpt-image-1` reference-image edits through `/images/edits` multipart uploads, and stop inferring un支持ed resolution overrides when no explicit `size` or `resolution` is provided.",
-      "Agents/replay: 移除 the malformed assistant-content canonicalization repair from replay history sanitization instead of extending that legacy repair path into replay validation.",
-      "插件s/OpenAI: tune the OpenAI prompt overlay for live-chat cadence so GPT replies stay shorter, more human, and less wall-of-text by default.",
-      "Providers/compat: stop forcing OpenAI-only defaults on proxy and custom OpenAI-compatible routes, preserve native vendor-specific reasoning/tool/streaming behavior across Anthropic-compatible, Moonshot, Mistral, ModelStudio, OpenRouter, xAI, and Z.ai endpoints, and route GitHub Copilot Claude models through Anthropic Messages instead of OpenAI Responses.",
-      "Providers/GitHub Copilot: send IDE identity headers on runtime model requests and GitHub token exchange so IDE-authenticated Copilot runs stop failing with missing `Editor-Version`. (#60641) Thanks @VACInc and @vincentkoc.",
-      "Providers/OpenRouter failover: classify `403 “Key limit exceeded”` spending-limit responses as billing so model fallback continues instead of stopping on generic auth. (#59892) Thanks @rockcent.",
-      "Providers/Anthropic: keep `claude-cli/*` auth on live Claude CLI credentials at runtime, avoid persisting stale bearer-token profiles, and suppress macOS Keychain prompts during non-interactive Claude CLI setup. (#61234) Thanks @darkamenosa.",
-      "Providers/Anthropic: when Claude CLI auth becomes the default, write a real `claude-cli` auth profile so local and gateway agent runs can use Claude CLI immediately without missing-API-key failures. Thanks @vincentkoc.",
-      "Providers/Anthropic Vertex: honor `cacheRetention: “long”` with the real 1-hour prompt-cache TTL on Vertex AI endpoints, and default `anthropic-vertex` cache retention like direct Anthropic. (#60888) Thanks @affsantos.",
-      "Agents/Anthropic: preserve native `toolu_*` replay ids on direct Anthropic and Anthropic Vertex paths so cache-sensitive history stops rewriting known-valid Anthropic tool-use ids. (#52612)",
-      "Providers/Google: 添加 model-level `cacheRetention` 支持 for direct Gemini system prompts by creating, reusing, and refreshing `cachedContents` automatically on Google AI Studio runs. (#51372) Thanks @rafaelmariano-glitch.",
-      "Google Gemini CLI auth: detect bundled npm installs by scanning packaged bundle files for the Gemini OAuth client config, so `npm install -g @google/gemini-cli` layouts work again. (#60486) Thanks @wzfmini01.",
-      "Google Gemini CLI auth: detect personal OAuth mode from local Gemini settings and skip Code Assist project discovery for those logins, so personal Google accounts stop failing with `loadCodeAssist 400 Bad Request`. (#49226) Thanks @bobworrall.",
-      "Google Gemini CLI auth: 改进 OAuth credential discovery across Windows nvm and Homebrew libexec installs, and align Code Assist metadata so Gemini login stops failing on packaged CLI layouts. (#40729) Thanks @hughcube.",
-      "Google Gemini CLI models: 添加 forward-compat 支持 for stable `gemini-2.5-*` model ids by letting the bundled CLI provider clone them from Google templates, so `gemini-2.5-flash-lite` and related configured models stop showing up as missing. (#35274) Thanks @mySebbe.",
-      "Google image generation: disable pinned DNS for Gemini image requests and honor explicit `pinDns` overrides in shared provider HTTP helpers so proxy-backed image generation works again. (#59873) Thanks @luoyanglang.",
-      "Providers/Microsoft Foundry: preserve explicit image capability on normalized Foundry deployments, repair stale GPT/o-series text-only model metadata across gateway and runtime paths, and keep unknown fallback models from borrowing unrelated image 支持.",
-      "Providers/Model Studio: preserve native streaming usage reporting for DashScope-compatible endpoints even when they are configured under a generic provider key, so streamed token totals stop sticking at zero. (#52395) Thanks @IVY-AI-gif.",
-      "Providers/Z.AI: preserve explicitly registered `glm-5-*` variants like `glm-5-turbo` instead of intercepting them with the generic GLM-5 forward-compat shim. (#48185) Thanks @haoyu-haoyu.",
-      "Amazon Bedrock/aws-sdk auth: stop injecting the fake `AWS_PROFILE` APIKey marker when no AWS auth env vars exist, so instance-role and other default-chain setups keep working without poisoning provider config. (#61194) Thanks @wirjo.",
-      "Agents/Kimi tool-call repair: preserve tool arguments that were already present on streamed tool calls when later malformed deltas fail reevaluation, while still dropping stale repair-only state before `toolcall_end`.",
-      "插件s/Kimi Coding: parse tagged tool calls and keep Anthropic-native tool payloads so Kimi coding endpoints execute tools instead of echoing raw markup. (#60051, #60391) Thanks @obviyus and @Eric-Guo.",
-      "Media understanding: auto-register image-capable config providers for vision routing, so custom GLM-style provider ids with image models stop failing with “no media-understanding provider registered”. (#51418) Thanks @xydt-610.",
-      "插件s/media understanding: enable bundled Groq and Deepgram providers by default so configured transcription models work without extra 插件 activation config. (#59982) Thanks @yxjsxy.",
-      "MiniMax/pricing: keep bundled MiniMax highspeed pricing distinct in provider catalogs and preserve the lower M2.5 cache-read pricing when onboarding older MiniMax models. (#54214) Thanks @octo-patch.",
-      "MiniMax: advertise image input on bundled `MiniMax-M2.7` and `MiniMax-M2.7-highspeed` model definitions so image-capable flows can route through the M2.7 family correctly. (#54843) Thanks @MerlinMiao88888888.",
-      "Models/MiniMax: honor `MINIMAX_API_HOST` for implicit bundled MiniMax provider catalogs so China-hosted API-key setups pick `API.minimaxi.com/anthropic` without manual provider config. (#34524) Thanks @caiqinghua.",
-      "Usage/MiniMax: invert remaining-style `usage_percent` fields when MiniMax reports only remaining percentage data, so usage bars stop showing nearly-full remaining quota as nearly-exhausted usage. (#60254) Thanks @jwchmodx.",
-      "Usage/MiniMax: let usage snapshots treat `minimax-portal` and MiniMax CN aliases as the same MiniMax quota surface, and prefer stored MiniMax OAuth before falling back to Coding Plan keys.",
-      "Usage/MiniMax: prefer the chat-model `model_remains` entry and derive Coding Plan window labels from MiniMax interval timestamps so MiniMax usage snapshots stop picking zero-budget media rows and misreporting 4h windows as `5h`. (#52349) Thanks @IVY-AI-gif.",
-      "Model picker/providers: treat bundled BytePlus and Volcengine plan aliases as their native providers during setup, and expose their bundled standard/coding catalogs before auth so setup can suggest the right models. (#58819) Thanks @Luckymingxuan.",
-      "Tools/web_search (Kimi): when `tools.web.search.kimi.baseUrl` is unset, inherit native Moonshot chat `baseUrl` (`.ai` / `.cn`) so China console keys authenticate on the same host as chat. 修复es #44851. (#56769) Thanks @tonga54.",
-      "Agents/Claude CLI: keep non-interactive `--permission-mode bypassPermissions` when custom `cliBackends.claude-cli.args` override defaults, including fallback resolution before the runtime 插件 registry is active, so cron and heartbeat Claude CLI runs do not regress to interactive approval mode. (#61114) Thanks @cathrynlavery and @thewilloftheshadow.",
-      "Agents/Claude CLI: persist explicit `openclaw agent --session-id` runs under a stable session key so follow-ups can reuse the stored CLI binding and resume the same underlying Claude session.",
-      "Agents/Claude CLI: persist routed Claude session bindings, rotate them on `/new` and `/reset`, and keep live Claude CLI model switches moving across the configured Claude family so resumed sessions follow the real active thread and model. Thanks @vincentkoc.",
-      "Agents/CLI backends: invalidate stored CLI session reuse when local CLI login state or the selected auth profile credential changes, so relogin and token rotation stop resuming stale sessions.",
-      "Agents/Claude CLI/images: reuse stable hydrated image file paths and preserve shared media extensions like HEIC when passing image refs to local CLI runs, so Claude CLI image prompts stop thrashing KV cache pre修复es and oddball image formats do not fall back to `.bin`. Thanks @vincentkoc.",
-      "Agents/compaction: keep assistant tool calls and displaced tool results in the same compaction chunk so strict summarization providers stop rejecting orphaned tool pairs. (#58849) Thanks @openperf.",
-      "Agents/failover: scope Anthropic `An unknown error occurred` failover matching by provider so generic internal unknown-error text no longer triggers retryable timeout fallback. (#59325) Thanks @aaron-he-zhu.",
-      "Agents/subagents: honor allowlist validation, auth-profile handoff, and session override state when a subagent retries after `LiveSessionModelSwitchError`. (#58178) Thanks @openperf.",
-      "Agents/runtime: make default subagent allowlists, inherited skills/workspaces, and duplicate session-id resolution behave more predictably, and include value-shape hints in missing-parameter tool errors. (#59944, #59992, #59858, #55317) Thanks @hclsys, @gumadeiras, @joelnishanth, and @priyansh19.",
-      "Agents/pairing: merge completion announce delivery context with the requester session fallback so missing `to` still reaches the original channel, and include `operator.talk.secrets` in CLI default operator scopes for node-role device pairing approvals. (#56481) Thanks @maxpetrusenko.",
-      "Agents/scheduling: steer background-now work toward automatic completion wake and treat `process` polling as on-demand inspection or intervention instead of default completion handling. (#60877) Thanks @vincentkoc.",
-      "Agents/skills: skip `.git` and `node_modules` when mirroring skills into sandbox workspaces so read-only sandboxes do not copy repo history or dependency trees. (#61090) Thanks @joelnishanth.",
-      "ACP/agents: inherit the target agent workspace for cross-agent ACP spawns and fall back safely when the inherited workspace no longer exists. (#58438) Thanks @zssggle-rgb.",
-      "ACPX/Windows: preserve backslashes and absolute `.exe` paths in Claude CLI parsing, and fail fast on wrapper-script targets with g界面dance to use `cmd.exe /c`, `powershell.exe -File`, or `node <script>`. (#60689) Thanks @steipete.",
-      "Auth/failover: persist selected fallback overrides before retrying, shorten `auth_permanent` lockouts, and refresh websocket/shared-auth sessions only when real auth changes occur so retries and secret rotations behave predictably. (#60404, #60323, #60387) Thanks @extrasmall0 and @mappel-nv.",
-      "Gateway/channels: pin the initial startup channel registry before later 插件-registry churn so configured channels stay visible and `channels.status` stops falling back to empty `channelOrder` / `channels` payloads after runtime 插件 loads.",
-      "Prompt caching: order stable workspace project-context files before `HEARTBEAT.md` and keep `HEARTBEAT.md` below the system-prompt cache boundary so heartbeat churn does not invalidate the stable project-context pre修复. (#58979) Thanks @yozu and @vincentkoc.",
-      "Prompt caching: route Codex Responses and Anthropic Vertex through boundary-aware cache shAPIng, and report the actual outbound system prompt in cache traces so cache reuse and misses line up with what providers really receive. Thanks @vincentkoc.",
-      "Agents/cache: preserve the full 3-turn prompt-cache image window across tool loops, keep colliding bundled MCP tool definitions deterministic, and reapply Anthropic Vertex cache shAPIng after payload hook replacements so KV/cache reuse stays stable. Thanks @vincentkoc.",
-      "Status/cache: restore `cacheRead` and `cacheWrite` in transcript fallback so `/status` keeps showing cache hit percentages when session logs are the only complete usage source. (#59247) Thanks @stuartsy.",
-      "Status/usage: let `/status` and `session_status` fall back to transcript token totals when the session meta store stayed at zero, so LM Studio, Ollama, DashScope, and similar OpenAI-compatible providers stop showing `Context: 0/...`. (#55041) Thanks @jjjojoj.",
-      "Mattermost/config schema: accept `groups.*.req界面reMention` again so existing Mattermost configs no longer fail strict validation after upgrade. (#58271) Thanks @MoerAI.",
-      "Doctor/config: compare normalized `talk` configs by deep structural equality instead of key-order-sensitive serialization so `openclaw doctor --修复` stops repeatedly reporting/applying no-op `talk.provider/providers` normalization. (#59911) Thanks @ejames-dev.",
-      "Anthropic CLI onboarding: rewrite migrated fallback model refs during non-interactive Claude CLI setup too, so onboarding and scripted setup no longer keep stale `anthropic/*` fallbacks after switching the primary model to `claude-cli/*`. Thanks @vincentkoc.",
-      "Models/Anthropic CLI auth: replace migrated `agents.defaults.models` allowlists when `openclaw models auth login --provider anthropic --method cli --set-default` switches to `claude-cli/*`, so stale `anthropic/*` entries do not linger beside the migrated Claude CLI defaults. Thanks @vincentkoc.",
-      "Doctor/Claude CLI: 添加 dedicated Claude CLI health checks so `openclaw doctor` can spot missing local installs or broken auth before agent runs fail. Thanks @vincentkoc.",
-      "插件s/auth-choice: apply provider-owned auth config patches without recursively preserving replaced default-model maps, so Anthropic Claude CLI and similar migrations can intentionally swap model allowlists during onboarding and setup instead of accumulating stale entries. Thanks @vincentkoc.",
-      "插件s/onboarding: write dotted 插件 界面Hint paths like Brave `webSearch.mode` as nested 插件 config so `llm-context` setup stops failing validation. (#61159) Thanks @obviyus.",
-      "插件s/install: preserve unsafe override flags across linked 插件 and hook-pack probes so local `--link` installs honor the documented override behavior. (#60624) Thanks @JerrettDavis.",
-      "插件s/cache: inherit the active gateway workspace for provider, web-search, and web-fetch snapshot loads when callers omit `workspaceDir`, so compatible 插件 registries and snapshot caches stop missing on gateway-owned runtime paths. (#61138) Thanks @jzakirov.",
-      "插件 SDK/context engines: export the missing context-engine result and subagent lifecycle types from `openclaw/插件-sdk` so context engine 插件s can type `ContextEngine` 实现ations without local workarounds. (#61251) Thanks @DaevMithran.",
-      "Tasks/maintenance: reconcile stale cron and chat-backed CLI task rows against live cron-job and agent-run ownership instead of treating any persisted session key as proof that the task is still running. (#60310) Thanks @lml2468.",
-      "插件s: suppress trust-warning noise during non-activating snapshot and CLI metadata loads. (#61427) Thanks @gumadeiras.",
-      "Agents/video generation: accept `agents.defaults.videoGenerationModel` in strict config validation and `openclaw config set/get`, so gateways using `video_generate` no longer fail to boot after enabling a video model.",
-      "Matrix/streaming: 添加 a q界面et preview mode for streamed Matrix replies, keep legacy `partial` preview-first behavior, and finalize q界面et media captions correctly so previews stop notifying early without dropping final text semantics. (#61450) Thanks @gumadeiras.",
-      "Gateway/shutdown: bound websocket-server shutdown even when no tracked clients remain, so gateway restarts stop hanging until the watchdog kills the process. (#61565) Thanks @mbelinky.",
-      "Control 界面/multilingual: localize the remaining shared channel, instances, nodes, and gateway-confirmation strings so the dashboard stops mixing translated 界面 with hardcoded English labels. Thanks @vincentkoc.",
-      "Discord/media: raise the default inbound and outbound media cap to `100MB` so Discord matches Telegram more closely and larger attachments stop failing on the old low default.",
-      "Matrix: keep direct transport requests on the pinned dispatcher by routing them through undici runtime fetch, so Matrix clients resume syncing on newer runtimes without dropping the validated 添加ress binding. (#61595) Thanks @gumadeiras.",
-      "插件s/facades: resolve globally installed bundled-插件 runtime facades from registry roots so bundled channels like LINE still boot when the winning 插件 install lives under the global extensions directory with an encoded scoped folder name. (#61297) Thanks @openperf."
-    ]
-  }
-},
-  {
-  "version": "2026.4.2",
-  "date": "2026-04-02",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "Tasks/Task Flow: restore the core Task Flow substrate with managed-vs-mirrored sync modes, durable flow state/revision tracking, and `openclaw flows` inspection/recovery primitives so background orchestration can persist and be operated separately from 插件 authoring layers. (#58930) Thanks @mbelinky.",
-      "Tasks/Task Flow: 添加 managed child task spawning plus sticky cancel intent, so external orchestrators can stop scheduling immediately and let parent Task Flows settle to `cancelled` once active child tasks finish. (#59610) Thanks @mbelinky.",
-      "插件s/Task Flow: 添加 a bound `API.runtime.taskFlow` seam so 插件s and trusted authoring layers can create and drive managed Task Flows from host-resolved OpenClaw context without passing owner identifiers on each call. (#59622) Thanks @mbelinky.",
-      "Android/assistant: 添加 assistant-role entrypoints plus Google Assistant App Actions metadata so Android can launch OpenClaw from the assistant trigger and hand prompts into the chat composer. (#59596) Thanks @obviyus.",
-      "Exec defaults: make gateway/node host exec default to YOLO mode by requesting `安全=full` with `ask=off`, and align host approval-file fallbacks plus docs/doctor reporting with that no-prompt default.",
-      "Providers/runtime: 添加 provider-owned replay hook surfaces for transcript policy, replay cleanup, and reasoning-mode dispatch. (#59143) Thanks @jalehman.",
-      "插件s/hooks: 添加 `before_agent_reply` so 插件s can short-circ界面t the LLM with synthetic replies after inline actions. (#20067) Thanks @JoshuaLelon.",
-      "Channels/session routing: move provider-specific session conversation grammar into 插件-owned session-key surfaces, preserving Telegram topic routing and Feishu scoped inheritance across bootstrap, model override, restart, and tool-policy paths.",
-      "Feishu/comments: 添加 a dedicated Drive comment-event flow with comment-thread context resolution, in-thread replies, and `feishu_drive` comment actions for document collaboration workflows. (#58497) Thanks @wittam-01.",
-      "Matrix/插件: emit spec-compliant `m.mentions` metadata across text sends, media captions, edits, poll fallback text, and action-driven edits so Matrix mentions notify reliably in clients like Element. (#59323) Thanks @gumadeiras.",
-      "Diffs: 添加 插件-owned `viewerBaseUrl` so viewer links can use a stable proxy/public origin without passing `baseUrl` on every tool call. (#59341) Related #59227. Thanks @gumadeiras.",
-      "Agents/compaction: resolve `agents.defaults.compaction.model` consistently for manual `/compact` and other context-engine compaction paths, so engine-owned compaction uses the configured override model across runtime entrypoints. (#56710) Thanks @oliviareid-svg.",
-      "Agents/compaction: 添加 `agents.defaults.compaction.notifyUser` so the `🧹 Compacting context...` start notice is opt-in instead of always being shown. (#54251) Thanks @oguricap0327.",
-      "WhatsApp/reactions: 添加 `reactionLevel` g界面dance for agent reactions. Thanks @mcaxtr.",
-      "Exec approvals/channels: auto-enable DM-first native chat approvals when 支持ed channels can infer approvers from existing owner config, while keeping channel fanout explicit and clarifying forwarding versus native approval client config."
-    ],
-    "improvements": [
-      "插件s/xAI: move `x_search` settings from the legacy core `tools.web.x_search.*` path to the 插件-owned `插件s.entries.xai.config.xSearch.*` path, standardize `x_search` auth on `插件s.entries.xai.config.webSearch.APIKey` / `XAI_API_KEY`, and migrate legacy config with `openclaw doctor --修复`. (#59674) Thanks @vincentkoc.",
-      "插件s/web fetch: move Firecrawl `web_fetch` config from the legacy core `tools.web.fetch.firecrawl.*` path to the 插件-owned `插件s.entries.firecrawl.config.webFetch.*` path, route `web_fetch` fallback through the new fetch-provider boundary instead of a Firecrawl-only core branch, and migrate legacy config with `openclaw doctor --修复`. (#59465) Thanks @vincentkoc."
-    ],
-    "bugfixes": [
-      "Providers/transport policy: centralize request auth, proxy, TLS, and header shAPIng across shared HTTP, stream, and websocket paths, block insecure TLS/runtime transport overrides, and keep proxy-hop TLS separate from target mTLS settings. (#59682) Thanks @vincentkoc.",
-      "Providers/Copilot: classify native GitHub Copilot API hosts in the shared provider endpoint resolver and harden token-derived proxy endpoint parsing so Copilot base URL routing stays centralized and fails closed on malformed hints. (#59644) Thanks @vincentkoc.",
-      "Providers/streaming headers: centralize default and attribution header merging across OpenAI websocket, embedded-runner, and proxy stream paths so provider-specific headers stay consistent and caller overrides only win where intended. (#59542) Thanks @vincentkoc.",
-      "Providers/media HTTP: centralize base URL normalization, default auth/header injection, and explicit header override handling across shared OpenAI-compatible audio, Deepgram audio, Gemini media/image, and Moonshot video request paths. (#59469) Thanks @vincentkoc.",
-      "Providers/OpenAI-compatible routing: centralize native-vs-proxy request policy so hidden attribution and related OpenAI-family defaults only apply on verified native endpoints across stream, websocket, and shared audio HTTP paths. (#59433) Thanks @vincentkoc.",
-      "Providers/Anthropic routing: centralize native-vs-proxy endpoint classification for direct Anthropic `service_tier` handling so spoofed or proxied hosts do not inherit native Anthropic defaults. (#59608) Thanks @vincentkoc.",
-      "Gateway/exec loopback: restore legacy-role fallback for empty paired-device token maps and allow silent local role upgrades so local exec and node clients stop failing with pairing-req界面red errors after `2026.3.31`. (#59092) Thanks @openperf.",
-      "Agents/subagents: pin admin-only subagent gateway calls to `operator.admin` while keeping `agent` at least privilege, so `sessions_spawn` no longer dies on loopback scope-upgrade pairing with `close(1008) \"pairing req界面red\"`. (#59555) Thanks @openperf.",
-      "Exec approvals/config: strip invalid `安全`, `ask`, and `askFallback` values from `~/.openclaw/exec-approvals.json` during normalization so malformed policy enums fall back cleanly to the documented defaults instead of corrupting runtime policy resolution. (#59112) Thanks @openperf.",
-      "Exec approvals/doctor: report host policy sources from the real approvals file path and ignore malformed host override values when attributing effective policy conflicts. (#59367) Thanks @gumadeiras.",
-      "Exec/runtime: treat `tools.exec.host=auto` as routing-only, keep implicit no-config exec on sandbox when available or gateway otherwise, and reject per-call host overrides that would bypass the configured sandbox or host target. (#58897) Thanks @vincentkoc.",
-      "Slack/mrkdwn formatting: 添加 b界面lt-in Slack mrkdwn g界面dance in inbound context so Slack replies stop falling back to generic Markdown patterns that render poorly in Slack. (#59100) Thanks @jadewon.",
-      "WhatsApp/presence: send `unavailable` presence on connect in self-chat mode so personal-phone users stop losing all push notifications while the gateway is running. (#59410) Thanks @mcaxtr.",
-      "WhatsApp/media: 添加 HTML, XML, and CSS to the MIME map and fall back gracefully for unknown media types instead of dropping the attachment. (#51562) Thanks @bobbyt74.",
-      "Matrix/onboarding: restore g界面ded setup in `openclaw channels 添加` and `openclaw configure --section channels`, while keeping custom 插件 wizards on the shared `setupWizard` seam. (#59462) Thanks @gumadeiras.",
-      "Matrix/streaming: keep live partial previews for the current assistant block while preserving completed block 更新s as separate messages when `channels.matrix.blockStreaming` is enabled. (#59384) Thanks @gumadeiras.",
-      "Feishu/comment threads: harden document comment-thread delivery so whole-document comments fall back to `添加_comment`, delayed reply lookups retry more reliably, and user-visible replies avoid reasoning/planning spillover. (#59129) Thanks @wittam-01.",
-      "MS Teams/streaming: strip already-streamed text from fallback block delivery when replies exceed the 4000-character streaming limit so long responses stop duplicating content. (#59297) Thanks @bradgroux.",
-      "Slack/thread context: filter thread starter and history by the effective conversation allowlist without dropping valid open-room, DM, or group DM context. (#58380) Thanks @jacobtomlinson.",
-      "Mattermost/probes: route status probes through the SSRF guard and honor `allowPrivateNetwork` so connectivity checks stay safe for self-hosted Mattermost deployments. (#58529) Thanks @mappel-nv.",
-      "Zalo/webhook replay: scope replay dedupe key by chat and sender so reused message IDs across different chats or senders no longer collide, and harden metadata reads for partially missing payloads. (#58444)",
-      "QQBot/structured payloads: restrict local file paths to QQ Bot-owned media storage, block traversal outside that root, reduce path leakage in logs, and keep inline image data URLs working. (#58453) Thanks @jacobtomlinson.",
-      "Image generation/providers: route OpenAI, MiniMax, and fal image requests through the shared provider HTTP transport path so custom base URLs, guarded private-network routing, and provider request defaults stay aligned with the rest of provider HTTP. Thanks @vincentkoc.",
-      "Image generation/providers: stop inferring private-network access from configured OpenAI, MiniMax, and fal image base URLs, and cap shared HTTP error-body reads so hostile or misconfigured endpoints fail closed without relaxing SSRF policy or buffering unbounded error payloads. Thanks @vincentkoc.",
-      "Browser/host inspection: keep static Chrome inspection helpers out of the activated browser runtime so `openclaw doctor browser` and related checks do not eagerly load the bundled browser 插件. (#59471) Thanks @vincentkoc.",
-      "Browser/CDP: normalize trailing-dot localhost absolute-form hosts before loopback checks so remote CDP websocket URLs like `ws://localhost.:...` rewrite back to the configured remote host. (#59236) Thanks @mappel-nv.",
-      "Agents/output sanitization: strip namespaced `antml:thinking` blocks from user-visible text so Anthropic-style internal monologue tags do not leak into replies. (#59550) Thanks @obviyus.",
-      "Kimi Coding/tools: normalize Anthropic tool payloads into the OpenAI-compatible function shape Kimi Coding expects so tool calls stop losing req界面red arguments. (#59440) Thanks @obviyus.",
-      "Image tool/paths: resolve relative local media paths against the agent `workspaceDir` instead of `process.cwd()` so inputs like `inbox/receipt.png` pass the local-path allowlist reliably. (#57222) Thanks Priyansh Gupta.",
-      "Podman/launch: 移除 noisy container output from `scripts/run-openclaw-podman.sh` and align the Podman install g界面dance with the q界面eter startup flow. (#59368) Thanks @sallyom.",
-      "插件s/runtime: keep LINE reply directives and browser-backed cleanup/reset flows working even when those 插件s are disabled while tightening bundled 插件 activation guards. (#59412) Thanks @vincentkoc.",
-      "ACP/gateway reconnects: keep ACP prompts alive across transient websocket drops while still failing boundedly when reconnect recovery does not complete. (#59473) Thanks @obviyus.",
-      "ACP/gateway reconnects: reject stale pre-ack ACP prompts after reconnect grace expiry so callers fail cleanly instead of hanging indefinitely when the gateway never confirms the run.",
-      "Gateway/session kill: enforce HTTP operator scopes on session kill requests and gate authorization before session lookup so unauthenticated callers cannot probe session existence. (#59128) Thanks @jacobtomlinson.",
-      "MS Teams/logging: format non-`Error` failures with the shared unknown-error helper so logs stop collapsing caught SDK or Axios objects into `[object Object]`. (#59321) Thanks @bradgroux.",
-      "Channels/setup: ignore untrusted workspace channel 插件s during setup resolution so a shadowing workspace 插件 cannot override b界面lt-in channel setup/login flows unless explicitly trusted in config. (#59158) Thanks @mappel-nv.",
-      "Exec/Windows: restore allowlist enforcement with quote-aware `argPattern` matching across gateway and node exec, and surface accurate dynamic pre-approved executable hints in the exec tool description. (#56285) Thanks @kpngr.",
-      "Gateway: prune empty `node-pending-work` state entries after explicit acknowledgments and natural expiry so the per-node state map no longer grows indefinitely. (#58179) Thanks @gavyngong.",
-      "Webhooks/secret comparison: replace ad-hoc timing-safe secret comparisons across BlueBubbles, Feishu, Mattermost, Telegram, Twilio, and Zalo webhook handlers with the shared `safeEqualSecret` helper and reject empty auth tokens in BlueBubbles. (#58432) Thanks @eleqtrizit.",
-      "OpenShell/mirror: constrain `remoteWorkspaceDir` and `remoteAgentWorkspaceDir` to the managed `/sandbox` and `/agent` roots, and keep mirror sync from overwriting or removing user-添加ed shell roots during config synchronization. (#58515) Thanks @eleqtrizit.",
-      "插件s/activation: preserve explicit, auto-enabled, and default activation provenance plus reason metadata across CLI, gateway bootstrap, and status surfaces so 插件 enablement state stays accurate after auto-enable resolution. (#59641) Thanks @vincentkoc.",
-      "Exec/env: block 添加itional host environment override pivots for package roots, language runtimes, compiler include paths, and credential/config locations so request-scoped exec cannot redirect trusted toolchains or config lookups. (#59233) Thanks @drobison00.",
-      "Dotenv/workspace overrides: block workspace `.env` files from overriding `OPENCLAW_PINNED_PYTHON` and `OPENCLAW_PINNED_WRITE_PYTHON` so trusted helper interpreters cannot be redirected by repo-local env injection. (#58473) Thanks @eleqtrizit.",
-      "插件s/install: accept JSON5 syntax in `openclaw.插件.json` and bundle `插件.json` manifests during install/validation, so third-party 插件s with trailing commas, comments, or unquoted keys no longer fail to install. (#59084) Thanks @singleGanghood.",
-      "Telegram/exec approvals: rewrite shared `/approve … allow-always` callback payloads to `/approve … always` before Telegram button rendering so 插件 approval IDs still fit Telegram's `callback_data` limit and keep the Allow Always action visible. (#59217) Thanks @jameslcowan.",
-      "Cron/exec timeouts: surface timed-out `exec` and `bash` failures in isolated cron runs even when `verbose: off`, including custom session-target cron jobs, so scheduled runs stop failing silently. (#58247) Thanks @skainguyen1412.",
-      "Telegram/exec approvals: fall back to the origin session key for async approval followups and keep resume-failure status delivery sanitized so Telegram followups still land without leaking raw exec metadata. (#59351) Thanks @seonang.",
-      "Node-host/exec approvals: bind `pnpm dlx` invocations through the approval planner's mutable-script path so the effective runtime command is resolved for approval instead of being left unbound. (#58374)",
-      "Exec/node hosts: stop forwarding the gateway workspace cwd to remote node exec when no workdir was explicitly requested, so cross-platform node approvals fall back to the node default cwd instead of failing with `SYSTEM_RUN_DENIED`. (#58977) Thanks @Starhappysh.",
-      "Exec approvals/channels: decouple initiating-surface approval availability from native delivery enablement so Telegram, Slack, and Discord still expose approvals when approvers exist and native target routing is configured separately. (#59776) Thanks @joelnishanth."
-    ]
-  }
-},
-  {
-  "version": "2026.4.1",
-  "date": "2026-04-01",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "Tasks/chat: 添加 `/tasks` as a chat-native background task board for the current session, with recent task details and agent-local fallback counts when no linked tasks are visible. Related #54226. Thanks @vincentkoc.",
-      "Web search/SearXNG: 添加 the bundled SearXNG provider 插件 for `web_search` with configurable host 支持. (#57317) Thanks @cgdusek.",
-      "Amazon Bedrock/Guardrails: 添加 Bedrock Guardrails 支持 to the bundled provider. (#58588) Thanks @MikeORed.",
-      "macOS/Voice Wake: 添加 the Voice Wake option to trigger Talk Mode. (#58490) Thanks @SmoothExec.",
-      "Feishu/comments: 添加 a dedicated Drive comment-event flow with comment-thread context resolution, in-thread replies, and `feishu_drive` comment actions for document collaboration workflows. (#58497) Thanks @wittam-01.",
-      "Gateway/webchat: make `chat.history` text truncation configurable with `gateway.webchat.chatHistoryMaxChars` and per-request `maxChars`, while preserving silent-reply filtering and existing default payload limits. (#58900)",
-      "Agents/default params: 添加 `agents.defaults.params` for global default provider parameters. (#58548) Thanks @lpender.",
-      "Agents/failover: cap prompt-side and assistant-side same-provider auth-profile retries for rate-limit failures before cross-provider model fallback, 添加 the `auth.cooldowns.rateLimitedProfileRotations` knob, and document the new fallback behavior. (#58707) Thanks @Forgely3D",
-      "Cron/tools allowlist: 添加 `openclaw cron --tools` for per-job tool allowlists. (#58504) Thanks @andyk-ms.",
-      "Channels/session routing: move provider-specific session conversation grammar into 插件-owned session-key surfaces, preserving Telegram topic routing and Feishu scoped inheritance across bootstrap, model override, restart, and tool-policy paths.",
-      "WhatsApp/reactions: 添加 `reactionLevel` g界面dance for agent reactions. Thanks @mcaxtr.",
-      "Telegram/errors: 添加 configurable `errorPolicy` and `errorCooldownMs` controls so Telegram can suppress repeated delivery errors per account, chat, and topic without muting distinct failures. (#51914) Thanks @chinar-amrutkar",
-      "ZAI/models: 添加 `glm-5.1` and `glm-5v-turbo` to the bundled Z.AI provider catalog. (#58793) Thanks @tomsun28",
-      "Agents/compaction: resolve `agents.defaults.compaction.model` consistently for manual `/compact` and other context-engine compaction paths, so engine-owned compaction uses the configured override model across runtime entrypoints. (#56710) Thanks @oliviareid-svg"
-    ],
-    "improvements": [],
-    "bugfixes": [
-      "Chat/error replies: stop leaking raw provider/runtime failures into external chat channels, return a friendly retry message instead, and 添加 a specific `/new` hint for Bedrock toolResult/toolUse session mismatches. (#58831) Thanks @ImLukeF.",
-      "Gateway/reload: ignore startup config writes by persisted hash in the config reloader so generated auth tokens and seeded Control 界面 origins do not trigger a restart loop, while real `gateway.auth.*` edits still req界面re restart. (#58678) Thanks @yelog",
-      "Tasks/gateway: keep the task registry maintenance sweep from stalling the gateway event loop under synchronous SQLite pressure, so upgraded gateways stop hanging about a minute after startup. (#58670) Thanks @openperf",
-      "Tasks/status: hide stale completed background tasks from `/status` and `session_status`, prefer live task context, and show recent failures only when no active work remains. (#58661) Thanks @vincentkoc",
-      "Tasks/gateway: re-check the current task record before maintenance marks runs lost or prunes them, so a task heartbeat or cleanup 更新 that lands during a sweep no longer gets overwritten by stale snapshot state.",
-      "Exec/approvals: honor `exec-approvals.json` 安全 defaults when inline or configured tool policy is unset, and keep Slack and Discord native approval handling aligned with inferred approvers and real channel enablement so remote exec stops falling into false approval timeouts and disabled states. Thanks @scoootscooob and @vincentkoc.",
-      "Exec/approvals: make `allow-always` persist as durable user-approved trust instead of behaving like `allow-once`, reuse exact-command trust on shell-wrapper paths that cannot safely persist an executable allowlist entry, keep static allowlist entries from silently bypassing `ask:\"always\"`, and req界面re explicit approval when Windows cannot b界面ld an allowlist execution plan instead of hard-dead-ending remote exec. Thanks @scoootscooob and @vincentkoc.",
-      "Exec/cron: resolve isolated cron no-route approval dead-ends from the effective host fallback policy when trusted automation is allowed, and make `openclaw doctor` warn when `tools.exec` is broader than `~/.openclaw/exec-approvals.json` so stricter host-policy conflicts are explicit. Thanks @scoootscooob and @vincentkoc.",
-      "Sessions/model switching: keep `/model` changes queued behind busy runs instead of interrupting the active turn, and retarget queued followups so later work picks up the new model as soon as the current turn finishes.",
-      "Gateway/HTTP: skip failing HTTP request stages so one broken facade no longer forces every HTTP endpoint to return 500. (#58746) Thanks @yelog",
-      "Gateway/nodes: stop pinning live node commands to the approved node-pair record. Node pairing remains a trust/token flow, while per-node `system.run` policy stays in that node's exec approvals config. 修复es #58824.",
-      "WebChat/exec approvals: use native approval 界面 g界面dance in agent system prompts instead of telling agents to paste manual `/approve` commands in webchat sessions. Thanks @vincentkoc.",
-      "Web 界面/OpenResponses: preserve rewritten stream snapshots in webchat and keep OpenResponses final streamed text aligned when models rewind earlier output. (#58641) Thanks @neeravmakwana",
-      "Discord/inbound media: pass Discord attachment and sticker downloads through the shared idle-timeout and worker-abort path so slow or stuck inbound media fetches stop hanging message processing. (#58593) Thanks @aquaright1",
-      "Telegram/retries: keep non-idempotent sends on the strict safe-send path, retry wrapped pre-connect failures, and preserve `429` / `retry_after` backoff for safe delivery retries. (#51895) Thanks @chinar-amrutkar",
-      "Telegram/exec approvals: route topic-aware exec approval followups through Telegram-owned threading and approval-target parsing, so forum-topic approvals stay in the originating topic instead of falling back to the root chat. (#58783)",
-      "Telegram/local Bot API: preserve media MIME types for absolute-path downloads so local audio files still trigger transcription and other MIME-based handling. (#54603) Thanks @jzakirov",
-      "Channels/WhatsApp: pass inbound message timestamp to model context so the AI can see when WhatsApp messages were sent. (#58590) Thanks @Maninae",
-      "Channels/QQ Bot: keep `/bot-logs` export gated behind a truly explicit QQBot allowlist, rejecting wildcard and mixed wildcard entries while preserving the real framework command path. Thanks @vincentkoc.",
-      "Channels/插件s: keep bundled channel 插件s loadable from legacy `channels.<id>` config even under restrictive 插件 allowlists, and make `openclaw doctor` warn only on real 插件 blockers instead of misleading setup g界面dance. (#58873) Thanks @obviyus",
-      "插件s/bundled runtimes: restore externalized bundled 插件 runtime dependency staging across packed installs, Docker b界面lds, and local runtime staging so bundled 插件s keep their declared runtime deps after the 2026.3.31 externalization change. (#58782)",
-      "LINE/runtime: resolve the packaged runtime contract from the b界面lt `dist/插件s/runtime` layout so LINE channels start correctly again after global npm installs on `2026.3.31`. (#58799) Thanks @vincentkoc.",
-      "MiniMax/插件s: auto-enable the bundled MiniMax 插件 for API-key auth/config so MiniMax image generation and other 插件-owned capabilities load without manual 插件 allowlisting. (#57127) Thanks @tars90percent.",
-      "Ollama/model picker: show only Ollama models after provider selection in the CLI picker. (#55290) Thanks @Luckymingxuan.",
-      "CDP/profiles: prefer `cdpPort` over stale WebSocket URLs so browser automation reconnects cleanly. (#58499) Thanks @Mlightsnow.",
-      "Media/paths: resolve relative `MEDIA` paths against the agent workspace so local attachment references keep working. (#58624) Thanks @aquaright1.",
-      "Memory/session indexing: keep full reindexes from skipping session transcripts when sync is triggered by `session-start` or `watch`, so restart-driven reindexes preserve session memory. (#39732) Thanks @upupc",
-      "Memory/QMD: prefer `--mask` over `--glob` when creating QMD collections so default memory collections keep their intended patterns and stop colliding on restart. (#58643) Thanks @GitZhangChi.",
-      "Subagents/tasks: keep subagent completion and cleanup from crashing when task-registry writes fail, so a corrupt or missing task row no longer takes down the gateway during lifecycle finalization. Thanks @vincentkoc.",
-      "Sandbox/browser: compare browser runtime inspection against `agents.defaults.sandbox.browser.image` so `openclaw sandbox list --browser` stops reporting healthy browser containers as image mismatches. (#58759) Thanks @sandpile.",
-      "插件s/install: forward `--dangerously-force-unsafe-install` through archive and npm-spec 插件 installs so the documented override reaches the 安全 scanner on those install paths. (#58879) Thanks @ryanlee-gemini.",
-      "Auto-reply/commands: strip inbound metadata before slash command detection so wrapped `/model`, `/new`, and `/status` commands are recognized. (#58725) Thanks @Mlightsnow.",
-      "Agents/Anthropic: preserve thinking blocks and signatures across replay, cache-control patching, and context pruning so compacted Anthropic sessions continue working instead of failing on later turns. (#58916) Thanks @obviyus",
-      "Agents/failover: unify structured and raw provider error classification so provider-specific `400`/`422` payloads no longer get forced into generic format failures before retry, billing, or compaction logic can inspect them. (#58856) Thanks @aaron-he-zhu.",
-      "Auth profiles/store: coerce misplaced SecretRef objects out of plaintext `key` and `token` fields during store load so agents without ACP runtime stop crashing on `.trim()` after upgrade. (#58923) Thanks @openperf.",
-      "ACPX/runtime: repair `queue owner unavailable` session recovery by replacing dead named sessions and resuming the backend session when ACPX exposes a stable session id, so the first ACP prompt no longer inherits a dead handle. (#58669) Thanks @neeravmakwana",
-      "ACPX/runtime: retry dead-session queue-owner repair without `--resume-session` when the reported ACPX session id is stale, so recovery still creates a fresh named session instead of failing session init. Thanks @obviyus.",
-      "Auth/OpenAI Codex: persist 插件-refreshed OAuth credentials to `auth-profiles.json` before returning them, so rotated Codex refresh tokens survive restart and stop falling into `refresh_token_reused` loops. (#53082)",
-      "Discord/gateway: hand reconnect ownership back to Carbon, keep runtime status aligned with close/reconnect state, and force-stop sockets that open without reaching READY so Discord monitors recover promptly instead of waiting on stale health timeouts. (#59019) Thanks @obviyus",
-      "Config/Telegram: migrate 移除d `channels.telegram.groupMentionsOnly` into `channels.telegram.groups[\"*\"].req界面reMention` on load so legacy configs no longer crash at startup. (#55336) thanks @jameslcowan."
-    ]
-  }
-},
-  {
-  "version": "2026.4.1-beta.1",
-  "date": "2026-04-01",
-  "type": "测试版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "Tasks/chat: 添加 `/tasks` as a chat-native background task board for the current session, with recent task details and agent-local fallback counts when no linked tasks are visible. Related #54226. Thanks @vincentkoc.",
-      "Web search/SearXNG: 添加 the bundled SearXNG provider 插件 for `web_search` with configurable host 支持. (#57317) Thanks @cgdusek.",
-      "Amazon Bedrock/Guardrails: 添加 Bedrock Guardrails 支持 to the bundled provider. (#58588) Thanks @MikeORed.",
-      "macOS/Voice Wake: 添加 the Voice Wake option to trigger Talk Mode. (#58490) Thanks @SmoothExec.",
-      "Feishu/comments: 添加 a dedicated Drive comment-event flow with comment-thread context resolution, in-thread replies, and `feishu_drive` comment actions for document collaboration workflows. (#58497) Thanks @wittam-01.",
-      "Gateway/webchat: make `chat.history` text truncation configurable with `gateway.webchat.chatHistoryMaxChars` and per-request `maxChars`, while preserving silent-reply filtering and existing default payload limits. (#58900)",
-      "Agents/default params: 添加 `agents.defaults.params` for global default provider parameters. (#58548) Thanks @lpender.",
-      "Agents/failover: cap prompt-side and assistant-side same-provider auth-profile retries for rate-limit failures before cross-provider model fallback, 添加 the `auth.cooldowns.rateLimitedProfileRotations` knob, and document the new fallback behavior. (#58707) Thanks @Forgely3D",
-      "Cron/tools allowlist: 添加 `openclaw cron --tools` for per-job tool allowlists. (#58504) Thanks @andyk-ms.",
-      "Channels/session routing: move provider-specific session conversation grammar into 插件-owned session-key surfaces, preserving Telegram topic routing and Feishu scoped inheritance across bootstrap, model override, restart, and tool-policy paths.",
-      "WhatsApp/reactions: 添加 `reactionLevel` g界面dance for agent reactions. Thanks @mcaxtr.",
-      "Telegram/errors: 添加 configurable `errorPolicy` and `errorCooldownMs` controls so Telegram can suppress repeated delivery errors per account, chat, and topic without muting distinct failures. (#51914) Thanks @chinar-amrutkar",
-      "ZAI/models: 添加 `glm-5.1` and `glm-5v-turbo` to the bundled Z.AI provider catalog. (#58793) Thanks @tomsun28",
-      "Agents/compaction: resolve `agents.defaults.compaction.model` consistently for manual `/compact` and other context-engine compaction paths, so engine-owned compaction uses the configured override model across runtime entrypoints. (#56710) Thanks @oliviareid-svg"
-    ],
-    "improvements": [],
-    "bugfixes": [
-      "Chat/error replies: stop leaking raw provider/runtime failures into external chat channels, return a friendly retry message instead, and 添加 a specific `/new` hint for Bedrock toolResult/toolUse session mismatches. (#58831) Thanks @ImLukeF.",
-      "Gateway/reload: ignore startup config writes by persisted hash in the config reloader so generated auth tokens and seeded Control 界面 origins do not trigger a restart loop, while real `gateway.auth.*` edits still req界面re restart. (#58678) Thanks @yelog",
-      "Tasks/gateway: keep the task registry maintenance sweep from stalling the gateway event loop under synchronous SQLite pressure, so upgraded gateways stop hanging about a minute after startup. (#58670) Thanks @openperf",
-      "Tasks/status: hide stale completed background tasks from `/status` and `session_status`, prefer live task context, and show recent failures only when no active work remains. (#58661) Thanks @vincentkoc",
-      "Tasks/gateway: re-check the current task record before maintenance marks runs lost or prunes them, so a task heartbeat or cleanup 更新 that lands during a sweep no longer gets overwritten by stale snapshot state.",
-      "Exec/approvals: honor `exec-approvals.json` 安全 defaults when inline or configured tool policy is unset, and keep Slack and Discord native approval handling aligned with inferred approvers and real channel enablement so remote exec stops falling into false approval timeouts and disabled states. Thanks @scoootscooob and @vincentkoc.",
-      "Exec/approvals: make `allow-always` persist as durable user-approved trust instead of behaving like `allow-once`, reuse exact-command trust on shell-wrapper paths that cannot safely persist an executable allowlist entry, keep static allowlist entries from silently bypassing `ask:\"always\"`, and req界面re explicit approval when Windows cannot b界面ld an allowlist execution plan instead of hard-dead-ending remote exec. Thanks @scoootscooob and @vincentkoc.",
-      "Exec/cron: resolve isolated cron no-route approval dead-ends from the effective host fallback policy when trusted automation is allowed, and make `openclaw doctor` warn when `tools.exec` is broader than `~/.openclaw/exec-approvals.json` so stricter host-policy conflicts are explicit. Thanks @scoootscooob and @vincentkoc.",
-      "Sessions/model switching: keep `/model` changes queued behind busy runs instead of interrupting the active turn, and retarget queued followups so later work picks up the new model as soon as the current turn finishes.",
-      "Gateway/HTTP: skip failing HTTP request stages so one broken facade no longer forces every HTTP endpoint to return 500. (#58746) Thanks @yelog",
-      "Gateway/nodes: stop pinning live node commands to the approved node-pair record. Node pairing remains a trust/token flow, while per-node `system.run` policy stays in that node's exec approvals config. 修复es #58824.",
-      "WebChat/exec approvals: use native approval 界面 g界面dance in agent system prompts instead of telling agents to paste manual `/approve` commands in webchat sessions. Thanks @vincentkoc.",
-      "Web 界面/OpenResponses: preserve rewritten stream snapshots in webchat and keep OpenResponses final streamed text aligned when models rewind earlier output. (#58641) Thanks @neeravmakwana",
-      "Discord/inbound media: pass Discord attachment and sticker downloads through the shared idle-timeout and worker-abort path so slow or stuck inbound media fetches stop hanging message processing. (#58593) Thanks @aquaright1",
-      "Telegram/retries: keep non-idempotent sends on the strict safe-send path, retry wrapped pre-connect failures, and preserve `429` / `retry_after` backoff for safe delivery retries. (#51895) Thanks @chinar-amrutkar",
-      "Telegram/exec approvals: route topic-aware exec approval followups through Telegram-owned threading and approval-target parsing, so forum-topic approvals stay in the originating topic instead of falling back to the root chat. (#58783)",
-      "Telegram/local Bot API: preserve media MIME types for absolute-path downloads so local audio files still trigger transcription and other MIME-based handling. (#54603) Thanks @jzakirov",
-      "Channels/WhatsApp: pass inbound message timestamp to model context so the AI can see when WhatsApp messages were sent. (#58590) Thanks @Maninae",
-      "Channels/QQ Bot: keep `/bot-logs` export gated behind a truly explicit QQBot allowlist, rejecting wildcard and mixed wildcard entries while preserving the real framework command path. Thanks @vincentkoc.",
-      "Channels/插件s: keep bundled channel 插件s loadable from legacy `channels.<id>` config even under restrictive 插件 allowlists, and make `openclaw doctor` warn only on real 插件 blockers instead of misleading setup g界面dance. (#58873) Thanks @obviyus",
-      "插件s/bundled runtimes: restore externalized bundled 插件 runtime dependency staging across packed installs, Docker b界面lds, and local runtime staging so bundled 插件s keep their declared runtime deps after the 2026.3.31 externalization change. (#58782)",
-      "LINE/runtime: resolve the packaged runtime contract from the b界面lt `dist/插件s/runtime` layout so LINE channels start correctly again after global npm installs on `2026.3.31`. (#58799) Thanks @vincentkoc.",
-      "MiniMax/插件s: auto-enable the bundled MiniMax 插件 for API-key auth/config so MiniMax image generation and other 插件-owned capabilities load without manual 插件 allowlisting. (#57127) Thanks @tars90percent.",
-      "Ollama/model picker: show only Ollama models after provider selection in the CLI picker. (#55290) Thanks @Luckymingxuan.",
-      "CDP/profiles: prefer `cdpPort` over stale WebSocket URLs so browser automation reconnects cleanly. (#58499) Thanks @Mlightsnow.",
-      "Media/paths: resolve relative `MEDIA` paths against the agent workspace so local attachment references keep working. (#58624) Thanks @aquaright1.",
-      "Memory/session indexing: keep full reindexes from skipping session transcripts when sync is triggered by `session-start` or `watch`, so restart-driven reindexes preserve session memory. (#39732) Thanks @upupc",
-      "Memory/QMD: prefer `--mask` over `--glob` when creating QMD collections so default memory collections keep their intended patterns and stop colliding on restart. (#58643) Thanks @GitZhangChi.",
-      "Subagents/tasks: keep subagent completion and cleanup from crashing when task-registry writes fail, so a corrupt or missing task row no longer takes down the gateway during lifecycle finalization. Thanks @vincentkoc.",
-      "Sandbox/browser: compare browser runtime inspection against `agents.defaults.sandbox.browser.image` so `openclaw sandbox list --browser` stops reporting healthy browser containers as image mismatches. (#58759) Thanks @sandpile.",
-      "插件s/install: forward `--dangerously-force-unsafe-install` through archive and npm-spec 插件 installs so the documented override reaches the 安全 scanner on those install paths. (#58879) Thanks @ryanlee-gemini.",
-      "Auto-reply/commands: strip inbound metadata before slash command detection so wrapped `/model`, `/new`, and `/status` commands are recognized. (#58725) Thanks @Mlightsnow.",
-      "Agents/Anthropic: preserve thinking blocks and signatures across replay, cache-control patching, and context pruning so compacted Anthropic sessions continue working instead of failing on later turns. (#58916) Thanks @obviyus",
-      "Agents/failover: unify structured and raw provider error classification so provider-specific `400`/`422` payloads no longer get forced into generic format failures before retry, billing, or compaction logic can inspect them. (#58856) Thanks @aaron-he-zhu.",
-      "Auth profiles/store: coerce misplaced SecretRef objects out of plaintext `key` and `token` fields during store load so agents without ACP runtime stop crashing on `.trim()` after upgrade. (#58923) Thanks @openperf.",
-      "ACPX/runtime: repair `queue owner unavailable` session recovery by replacing dead named sessions and resuming the backend session when ACPX exposes a stable session id, so the first ACP prompt no longer inherits a dead handle. (#58669) Thanks @neeravmakwana",
-      "ACPX/runtime: retry dead-session queue-owner repair without `--resume-session` when the reported ACPX session id is stale, so recovery still creates a fresh named session instead of failing session init. Thanks @obviyus.",
-      "Auth/OpenAI Codex: persist 插件-refreshed OAuth credentials to `auth-profiles.json` before returning them, so rotated Codex refresh tokens survive restart and stop falling into `refresh_token_reused` loops. (#53082)",
-      "Discord/gateway: hand reconnect ownership back to Carbon, keep runtime status aligned with close/reconnect state, and force-stop sockets that open without reaching READY so Discord monitors recover promptly instead of waiting on stale health timeouts. (#59019) Thanks @obviyus"
-    ]
-  }
-},
-  {
-  "version": "2026.3.31",
-  "date": "2026-03-31",
-  "type": "稳定版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "ACP/插件s: 添加 an explicit default-off ACPX 插件-tools MCP bridge config, document the trust boundary, and harden the b界面lt-in bridge packaging/logging path so global installs and stdio MCP sessions work reliably. (#56867) Thanks @joe2643.",
-      "Agents/LLM: 添加 a configurable idle-stream timeout for embedded runner requests so stalled model streams abort cleanly instead of hanging until the broader run timeout fires. (#55072) Thanks @liuy.",
-      "Agents/MCP: materialize bundle MCP tools with provider-safe names (`serverName__toolName`), 支持 optional `streamable-http` transport selection plus per-server connection timeouts, and preserve real tool results from aborted/error turns unless truncation explicitly drops them. (#49505) Thanks @ziomancer.",
-      "Android/notifications: 添加 notification-forwarding controls with package filtering, q界面et hours, rate limiting, and safer picker behavior for forwarded notification events. (#40175) Thanks @nimbleenigma.",
-      "Background tasks: turn tasks into a real shared background-run control plane instead of ACP-only bookkeeping by unifying ACP, subagent, cron, and background CLI execution under one SQLite-backed ledger, routing detached lifecycle 更新s through the executor seam, 添加ing audit/maintenance/status visibility, tightening auto-cleanup and lost-run recovery, improving task awareness in internal status/tool surfaces, and clarifying the split between heartbeat/main-session automation and detached scheduled runs. Thanks @mbelinky and @vincentkoc.",
-      "Background tasks: 添加 the first linear task flow control surface with `openclaw flows list|show|cancel`, keep manual multi-task flows separate from one-task auto-sync flows, and surface doctor recovery hints for obviously orphaned or broken flow/task linkage. Thanks @mbelinky and @vincentkoc.",
-      "Channels/QQ Bot: 添加 QQ Bot as a bundled channel 插件 with multi-account setup, SecretRef-aware credentials, slash commands, reminders, and media send/receive 支持. (#52986) Thanks @sliverp.",
-      "Diffs: skip unused viewer-versus-file SSR preload work so `diffs` view-only and file-only runs do less render work while keeping mode outputs aligned. (#57909) thanks @gumadeiras.",
-      "Tasks: 添加 a minimal SQLite-backed task flow registry plus task-to-flow linkage scaffolding, so orchestrated work can start gaining a first-class parent record without changing current task delivery behavior. Thanks @mbelinky and @vincentkoc.",
-      "Tasks: persist blocked state on one-task task flows and let the same flow reopen cleanly on retry, so blocked detached work can carry a parent-level reason and continue without fragmenting into a new job. Thanks @mbelinky and @vincentkoc.",
-      "Tasks: route one-task ACP and subagent 更新s through a parent task-flow owner context, so detached work can emerge back through the intended parent thread/session instead of speaking only as a raw child task. Thanks @mbelinky and @vincentkoc.",
-      "LINE/outbound media: 添加 LINE image, video, and audio outbound sends on the LINE-specific delivery path, including explicit preview/tracking handling for videos while keeping generic media sends on the existing image-only route. (#45826) Thanks @masatohoshino.",
-      "Matrix/history: 添加 optional room history context for Matrix group triggers via `channels.matrix.historyLimit`, with per-agent watermarks and retry-safe snapshots so failed trigger retries do not drift into newer room messages. (#57022) thanks @chain710.",
-      "Matrix/network: 添加 explicit `channels.matrix.proxy` config for routing Matrix traffic through an HTTP(S) proxy, including account-level overrides and matching probe/runtime behavior. (#56931) thanks @patrick-yingxi-pan.",
-      "Matrix/streaming: 添加 draft streaming so partial Matrix replies 更新 the same message in place instead of sending a new message for each chunk. (#56387) Thanks @jrusz.",
-      "Matrix/threads: 添加 per-DM `threadReplies` overrides and keep thread session isolation aligned with the effective room or DM thread policy from the triggering message onward. (#57995) thanks @teconomix.",
-      "MCP: 添加 remote HTTP/SSE server 支持 for `mcp.servers` URL configs, including auth headers and safer config redaction for MCP credentials. (#50396) Thanks @dhananjai1729.",
-      "Memory/QMD: 添加 per-agent `memorySearch.qmd.extraCollections` so agents can opt into cross-agent session search without flattening every transcript collection into one shared QMD namespace. Thanks @vincentkoc.",
-      "Microsoft Teams/member info: 添加 a Graph-backed member info action so Teams automations and tools can resolve channel member details directly from Microsoft Graph. (#57528) Thanks @sudie-codes.",
-      "Nostr/inbound DMs: verify inbound event signatures before pairing or sender-authorization side effects, so forged DM events no longer create pairing requests or trigger reply attempts. Thanks @smaeljaish771 and @vincentkoc.",
-      "OpenAI/Responses: forward configured `text.verbosity` across Responses HTTP and WebSocket transports, surface it in `/status`, and keep per-agent verbosity precedence aligned with runtime behavior. (#47106) Thanks @merc1305 and @vincentkoc.",
-      "Pi/Codex: 添加 native Codex web search 支持 for embedded Pi runs, including config/docs/wizard coverage and managed-tool suppression when native Codex search is active. (#46579) Thanks @Evizero.",
-      "Slack/exec approvals: 添加 native Slack approval routing and approver authorization so exec approval prompts can stay in Slack instead of falling back to the Web 界面 or terminal. Thanks @vincentkoc.",
-      "TTS: 添加 structured provider diagnostics and fallback attempt analytics. (#57954) Thanks @joshavant.",
-      "WhatsApp/reactions: agents can now react with emoji on incoming WhatsApp messages, enabling more natural conversational interactions like acknowledging a photo with ❤️ instead of typing a reply. Thanks @mcaxtr.",
-      "Agents/BTW: force `/btw` side questions to disable provider reasoning so Anthropic adaptive-thinking sessions stop failing with `No BTW response generated`. 修复es #55376. Thanks @Catteres and @vincentkoc.",
-      "CLI/onboarding: reset the remote gateway URL prompt to the safe loopback default after declining a discovered endpoint, so onboarding does not keep a previously rejected remote URL. (#57828)",
-      "Agents/exec defaults: honor per-agent `tools.exec` defaults when no inline directive or session override is present, so configured exec host, 安全, ask, and node settings actually apply. (#57689)",
-      "Sandbox/networking: sanitize SSH subprocess env vars through the shared sandbox policy and route marketplace archive downloads plus Ollama discovery, auth, and pull requests through the guarded fetch path so sandboxed execution and remote fetches follow the repo's trust boundaries. (#57848, #57850)"
-    ],
-    "improvements": [
-      "Nodes/exec: 移除 the duplicated `nodes.run` shell wrapper from the CLI and agent `nodes` tool so node shell execution always goes through `exec host=node`, keeping node-specific capabilities on `nodes invoke` and the dedicated media/location/notify actions.",
-      "插件 SDK: deprecate the legacy provider compat subpaths plus the older bundled provider setup and channel-runtime 兼容性 shims, emit migration warnings, and keep the current documented `openclaw/插件-sdk/*` entrypoints plus local `API.ts` / `runtime-API.ts` barrels as the forward path ahead of a future major-release removal.",
-      "Skills/install and 插件s/install: b界面lt-in dangerous-code `critical` findings and install-time scan failures now fail closed by default, so 插件 installs and gateway-backed skill dependency installs that previously succeeded may now req界面re an explicit dangerous override such as `--dangerously-force-unsafe-install` to proceed.",
-      "Gateway/auth: `trusted-proxy` now rejects mixed shared-token configs, and local-direct fallback req界面res the configured token instead of implicitly authenticating same-host callers. Thanks @zhangning-agent, @jacobtomlinson, and @vincentkoc.",
-      "Gateway/node commands: node commands now stay disabled until node pairing is approved, so device pairing alone is no longer enough to expose declared node commands. (#57777) Thanks @jacobtomlinson.",
-      "Gateway/node events: node-originated runs now stay on a reduced trusted surface, so notification-driven or node-triggered flows that previously relied on broader host/session tool access may need adjustment. (#57691) Thanks @jacobtomlinson."
-    ],
-    "bugfixes": [
-      "Slack: stop retry-driven duplicate replies when draft-finalization edits fail ambiguously, and log configured allowlisted users/channels by readable name instead of raw IDs.",
-      "Agents/OpenAI Responses: normalize raw bundled MCP tool schemas on the WebSocket/Responses path so bare-object, object-ish, and top-level union MCP tools no longer get rejected by OpenAI during tool registration. (#58299) Thanks @yelog.",
-      "ACP/安全: replace ACP's dangerous-tool name override with semantic approval classes, so only narrow readonly reads/searches can auto-approve while indirect exec-capable and control-plane tools always req界面re explicit prompt approval. Thanks @vincentkoc.",
-      "ACP/sessions_spawn: register ACP child runs for completion tracking and lifecycle cleanup, and make registration-failure cleanup explicitly best-effort so callers do not assume an already-started ACP turn was fully aborted. (#40885) Thanks @xaeon2026 and @vincentkoc.",
-      "ACP/tasks: mark cleanly exited ACP runs as blocked when they end on deterministic write or authorization blockers, and wake the parent session with a follow-up instead of falsely reporting success.",
-      "ACPX/runtime: derive the bundled ACPX expected version from the extension package metadata instead of hardcoding a separate literal, so 插件-local ACPX installs stop drifting out of health-check parity after version bumps. (#49089) Thanks @jiejiesks and @vincentkoc.",
-      "Agents/Anthropic failover: treat Anthropic `API_error` payloads with `An unexpected error occurred while processing the response` as transient so retry/fallback can engage instead of surfacing a terminal failure. (#57441) Thanks @zijiess and @vincentkoc.",
-      "Agents/compaction: keep late compaction-retry completions from double-resolving finished compaction futures, so interrupted or timed-out compactions stop surfacing spurious second-completion races. (#57796) Thanks @joshavant.",
-      "Agents/disabled providers: make disabled providers disappear from default model selection and embedded provider fallback, while letting explicitly pinned disabled providers fail with a clear config error instead of silently taking traffic. (#57735) Thanks @rileybrown-dev and @vincentkoc.",
-      "Agents/OAuth output: force exec-host OAuth output readers through the gateway fs policy so embedded gateway runs stop crashing when provider auth writes land outside the current sandbox workspace. (#58249) Thanks @joshavant.",
-      "Agents/system prompt: 修复 `agent.name` interpolation in the embedded runtime system prompt and make provider/model fallback text reflect the effective runtime selection after start. (#57625) Thanks @StllrSvr and @vincentkoc.",
-      "Android/device info: read the app's version metadata from the package manager instead of hidden APIs so Android 15+ onboarding and device info no longer fail to compile or report placeholder values. (#58126) Thanks @L3ER0Y.",
-      "Android/pairing: stop appending duplicate push receiver entries to `gateway-service.conf` on repeated QR pairing and keep push registration bounded to the current successful pairing, so Android push delivery stays healthy across re-pair and token rotation. (#58256) Thanks @surrealroad.",
-      "App install smoke: pin the latest-release lookup to `latest`, cache the first stable install version across the rerun, and relax prerelease package assertions so the Parallels smoke lane can validate stable-to-main upgrades even when `beta` moves ahead or the guest starts from an older stable. (#58177) Thanks @vincentkoc.",
-      "Auth/profiles: keep the last successful config load in memory for the running process and refresh that snapshot on successful writes/reloads, so hot paths stop reparsing `openclaw.json` between watcher-driven swaps.",
-      "Config/SecretRef + Control 界面: harden SecretRef redaction round-trip restore, block unsafe raw fallback (force Form mode when raw is unavailable), and preflight submitted-config SecretRefs before config write RPC persistence. (#58044) Thanks @joshavant.",
-      "Config/Telegram: migrate 移除d `channels.telegram.groupMentionsOnly` into `channels.telegram.groups[\\\"*\\\"].req界面reMention` on load so legacy configs no longer crash at startup. (#55336) thanks @jameslcowan.",
-      "Config/更新: stop `openclaw doctor` write-backs from persisting 插件-injected channel defaults, so `openclaw 更新` no longer seeds config keys that later break service refresh validation. (#56834) Thanks @openperf.",
-      "Control 界面/agents: auto-load agent workspace files on initial Files panel open, and populate overview model/workspace/fallbacks from effective runtime agent metadata so defaulted models no longer show as `Not set`. (#56637) Thanks @dxsx84.",
-      "Control 界面/slash commands: make `/steer` and `/redirect` work from the chat command palette with visible pending state for active-run `/steer`, correct redirected-run tracking, and a single canonical `/steer` entry in the command menu. (#54625) Thanks @fuller-stack-dev.",
-      "Cron/announce: preserve all deliverable text payloads for announce mode instead of collapsing to the last chunk, so multi-line cron reports deliver in full to Telegram forum topics.",
-      "Cron/isolated sessions: carry the full live-session provider, model, and auth-profile selection across retry restarts so cron jobs with model overrides no longer fail or loop on mid-run model-switch requests. (#57972) Thanks @issaba1.",
-      "Diffs/config: preserve schema-shaped 插件 config parsing from `diffs插件ConfigSchema.safeParse()`, so direct callers keep `defaults` and `安全` sections instead of receiving flattened tool defaults. (#57904) Thanks @gumadeiras.",
-      "Diffs: fall back to plain text when `lang` hints are invalid during diff render and viewer hydration, so bad or stale language values no longer break the diff viewer. (#57902) Thanks @gumadeiras.",
-      "Discord/voice: enforce the same g界面ld channel and member allowlist checks on spoken voice ingress before transcription, so joined voice channels no longer accept speech from users outside the configured Discord access policy. Thanks @cyjhhh and @vincentkoc.",
-      "Docker/setup: force B界面ldKit for local image b界面lds (including sandbox image b界面lds) so `./docker-setup.sh` no longer fails on `RUN --mount=...` when hosts default to Docker's legacy b界面lder. (#56681) Thanks @zhangh界面-china.",
-      "Docs/anchors: 修复 broken English docs links and make Mint anchor audits run against the English-source docs tree. (#57039) thanks @velvet-shark.",
-      "Doctor/插件s: skip false Matrix legacy-helper warnings when no migration plans exist, and keep bundled `enabledByDefault` 插件s in the gateway startup set. (#57931) Thanks @dinakars777.",
-      "Exec approvals/macOS: unwrap `arch` and `xcrun` before deriving shell payloads and allow-always patterns, so wrapper approvals stay bound to the carried command instead of the outer carrier. Thanks @tdjackey and @vincentkoc.",
-      "Exec approvals: unwrap `caffeinate` and `sandbox-exec` before persisting allow-always trust so later shell payload changes still req界面re a fresh approval. Thanks @tdjackey and @vincentkoc.",
-      "Exec/approvals: infer Discord and Telegram exec approvers from existing owner config when `execApprovals.approvers` is unset, extend the default approval window to 30 minutes, and clarify approval-unavailable g界面dance so approvals do not appear to silently disappear.",
-      "Pi/T界面: flush message-boundary replies at `message_end` so turns stop looking stuck until the next nudge when the final reply was already ready. Thanks @vincentkoc.",
-      "Exec/approvals: keep `awk` and `sed` family binaries out of the low-risk `safeBins` fast path, and stop doctor profile scaffolding from treating them like ordinary custom filters. Thanks @vincentkoc.",
-      "Exec/env: block proxy, TLS, and Docker endpoint env overrides in host execution so request-scoped commands cannot silently reroute outbound traffic or trust attacker-supplied certificate settings. Thanks @AntAI安全Lab.",
-      "Exec/env: block Python package index override variables from request-scoped host exec environment sanitization so package fetches cannot be redirected through a caller-supplied index. Thanks @nexrin and @vincentkoc.",
-      "Exec/node: stop gateway-side workdir fallback from rewriting explicit `host=node` cwd values to the gateway filesystem, so remote node exec approval and runs keep using the intended node-local directory. (#50961) Thanks @openperf.",
-      "Exec/runtime: default implicit exec to `host=auto`, resolve that target to sandbox only when a sandbox runtime exists, keep explicit `host=sandbox` fail-closed without sandbox, and show `/exec` effective host state in runtime status/docs.",
-      "Exec: fail closed when the implicit sandbox host has no sandbox runtime, and stop denied async approval followups from reusing prior command output from the same session. (#56800) Thanks @scoootscooob.",
-      "Feishu/groups: keep quoted replies and topic bootstrap context aligned with group sender allowlists so only allowlisted thread messages seed agent context. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Gateway/attachments: offload large inbound images without leaking `media://` markers into text-only runs, preserve mixed attachment order for model input/transcripts, and fail closed when model image capability cannot be resolved. (#55513) Thanks @Syysean.",
-      "Gateway/auth: keep shared-auth rate limiting active during WebSocket handshake attempts even when callers also send device-token candidates, so bogus device-token fields no longer suppress shared-secret brute-force tracking. Thanks @kexinoh and @vincentkoc.",
-      "Gateway/auth: reject mismatched browser `Origin` headers on trusted-proxy HTTP operator requests while keeping origin-less headless proxy clients working. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Gateway/device tokens: disconnect active device sessions after token rotation so newly rotated credentials revoke existing live connections immediately instead of waiting for those sockets to close naturally. Thanks @zsxsoft and @vincentkoc.",
-      "Gateway/health: carry webhook-vs-polling account mode from channel descriptors into runtime snapshots so passive channels like LINE and BlueBubbles skip false stale-socket health failures. (#47488) Thanks @karesans界面-u.",
-      "Gateway/pairing: restore QR bootstrap onboarding handoff so fresh `/pair qr` iPhone setup can auto-approve the initial node pairing, receive a reusable node device token, and stop retrying with spent bootstrap auth. (#58382) Thanks @ngutman.",
-      "Gateway/OpenAI 兼容性: accept flat Responses API function tool definitions on `/v1/responses` and preserve `strict` when normalizing hosted tools into the embedded runner, so spec-compliant clients like Codex no longer fail validation or silently lose strict tool enforcement. Thanks @malaiwah and @vincentkoc.",
-      "Gateway/OpenAI HTTP: restore default operator scopes for bearer-authenticated requests that omit `x-openclaw-scopes`, so headless `/v1/chat/completions` and session-history callers work again after the recent method-scope hardening. (#57596) Thanks @openperf.",
-      "Gateway/插件s: scope 插件-auth HTTP route runtime clients to read-only access and keep gateway-authenticated 插件 routes on write scope, so 插件-owned webhook handlers do not inherit write-capable runtime access by default. Thanks @davidluzsilva and @vincentkoc.",
-      "Gateway/SecretRef: resolve restart token drift checks with merged service/runtime env sources and hard-fail un支持ed mutable SecretRef plus OAuth-profile combinations so restart warnings and policy enforcement match runtime behavior. (#58141) Thanks @joshavant.",
-      "Gateway/tools HTTP: tighten HTTP tool-invoke authorization so owner-only tools stay off HTTP invoke paths. (#57773) Thanks @jacobtomlinson.",
-      "Harden async approval followup delivery in webchat-only sessions (#57359) Thanks @joshavant.",
-      "Heartbeat/auth: prevent exec-event heartbeat runs from inheriting owner-only tool access from the session delivery target, so node exec output stays on the non-owner tool surface even when the target session belongs to the owner. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Hooks/config: accept runtime channel 插件 ids in `hooks.mappings[].channel` (for example `feishu`) instead of rejecting non-core channels during config validation. (#56226) Thanks @AiKrai001.",
-      "Hooks/session routing: rebind hook-triggered `agent:` session keys to the actual target agent before isolated dispatch so dedicated hook agents keep their own session-scoped tool and 插件 identity. Thanks @kexinoh and @vincentkoc.",
-      "Host exec/env: block 添加itional request-scoped env overrides that can redirect Docker endpoints, trust roots, compiler include paths, package resolution, or Python environment roots during approved host runs. Thanks @tdjackey and @vincentkoc.",
-      "Image generation/b界面ld: write stable runtime alias files into `dist/` and route provider-auth runtime lookups through those aliases so image-generation providers keep resolving auth/runtime modules after reb界面lds instead of crashing on missing hashed chunk files.",
-      "iOS/Live Activities: mark the `ActivityKit` import in `LiveActivityManager.swift` as `@preconcurrency` so Xcode 26.4 / Swift 6 b界面lds stop failing on strict concurrency checks. (#57180) Thanks @ngutman.",
-      "LINE/ACP: 添加 current-conversation binding and inbound binding-routing parity so `/acp spawn ... --thread here`, configured ACP bindings, and active conversation-bound ACP sessions work on LINE like the other conversation channels.",
-      "LINE/markdown: preserve underscores inside Latin, Cyrillic, and CJK words when stripping markdown, while still removing standalone `_italic_` markers on the shared text-runtime path used by LINE and TTS. (#47465) Thanks @jackjin1997.",
-      "Agents/failover: make overloaded same-provider retry count and retry delay configurable via `auth.cooldowns`, default to one retry with no delay, and document the model-fallback behavior."
-    ]
-  }
-},
-  {
-  "version": "2026.3.31-beta.1",
-  "date": "2026-03-31",
-  "type": "测试版",
-  "latest": false,
-  "changes": {
-    "features": [
-      "ACP/插件s: 添加 an explicit default-off ACPX 插件-tools MCP bridge config, document the trust boundary, and harden the b界面lt-in bridge packaging/logging path so global installs and stdio MCP sessions work reliably. (#56867) Thanks @joe2643.",
-      "Agents/LLM: 添加 a configurable idle-stream timeout for embedded runner requests so stalled model streams abort cleanly instead of hanging until the broader run timeout fires. (#55072) Thanks @liuy.",
-      "Agents/MCP: materialize bundle MCP tools with provider-safe names (`serverName__toolName`), 支持 optional `streamable-http` transport selection plus per-server connection timeouts, and preserve real tool results from aborted/error turns unless truncation explicitly drops them. (#49505) Thanks @ziomancer.",
-      "Android/notifications: 添加 notification-forwarding controls with package filtering, q界面et hours, rate limiting, and safer picker behavior for forwarded notification events. (#40175) Thanks @nimbleenigma.",
-      "Background tasks: turn tasks into a real shared background-run control plane instead of ACP-only bookkeeping by unifying ACP, subagent, cron, and background CLI execution under one SQLite-backed ledger, routing detached lifecycle 更新s through the executor seam, 添加ing audit/maintenance/status visibility, tightening auto-cleanup and lost-run recovery, improving task awareness in internal status/tool surfaces, and clarifying the split between heartbeat/main-session automation and detached scheduled runs. Thanks @mbelinky and @vincentkoc.",
-      "Background tasks: 添加 the first linear task flow control surface with `openclaw flows list|show|cancel`, keep manual multi-task flows separate from one-task auto-sync flows, and surface doctor recovery hints for obviously orphaned or broken flow/task linkage. Thanks @mbelinky and @vincentkoc.",
-      "Channels/QQ Bot: 添加 QQ Bot as a bundled channel 插件 with multi-account setup, SecretRef-aware credentials, slash commands, reminders, and media send/receive 支持. (#52986) Thanks @sliverp.",
-      "Diffs: skip unused viewer-versus-file SSR preload work so `diffs` view-only and file-only runs do less render work while keeping mode outputs aligned. (#57909) thanks @gumadeiras.",
-      "Tasks: 添加 a minimal SQLite-backed task flow registry plus task-to-flow linkage scaffolding, so orchestrated work can start gaining a first-class parent record without changing current task delivery behavior. Thanks @mbelinky and @vincentkoc.",
-      "Tasks: persist blocked state on one-task task flows and let the same flow reopen cleanly on retry, so blocked detached work can carry a parent-level reason and continue without fragmenting into a new job. Thanks @mbelinky and @vincentkoc.",
-      "Tasks: route one-task ACP and subagent 更新s through a parent task-flow owner context, so detached work can emerge back through the intended parent thread/session instead of speaking only as a raw child task. Thanks @mbelinky and @vincentkoc.",
-      "LINE/outbound media: 添加 LINE image, video, and audio outbound sends on the LINE-specific delivery path, including explicit preview/tracking handling for videos while keeping generic media sends on the existing image-only route. (#45826) Thanks @masatohoshino.",
-      "Matrix/history: 添加 optional room history context for Matrix group triggers via `channels.matrix.historyLimit`, with per-agent watermarks and retry-safe snapshots so failed trigger retries do not drift into newer room messages. (#57022) thanks @chain710.",
-      "Matrix/network: 添加 explicit `channels.matrix.proxy` config for routing Matrix traffic through an HTTP(S) proxy, including account-level overrides and matching probe/runtime behavior. (#56931) thanks @patrick-yingxi-pan.",
-      "Matrix/streaming: 添加 draft streaming so partial Matrix replies 更新 the same message in place instead of sending a new message for each chunk. (#56387) Thanks @jrusz.",
-      "Matrix/threads: 添加 per-DM `threadReplies` overrides and keep thread session isolation aligned with the effective room or DM thread policy from the triggering message onward. (#57995) thanks @teconomix.",
-      "MCP: 添加 remote HTTP/SSE server 支持 for `mcp.servers` URL configs, including auth headers and safer config redaction for MCP credentials. (#50396) Thanks @dhananjai1729.",
-      "Memory/QMD: 添加 per-agent `memorySearch.qmd.extraCollections` so agents can opt into cross-agent session search without flattening every transcript collection into one shared QMD namespace. Thanks @vincentkoc.",
-      "Microsoft Teams/member info: 添加 a Graph-backed member info action so Teams automations and tools can resolve channel member details directly from Microsoft Graph. (#57528) Thanks @sudie-codes.",
-      "Nostr/inbound DMs: verify inbound event signatures before pairing or sender-authorization side effects, so forged DM events no longer create pairing requests or trigger reply attempts. Thanks @smaeljaish771 and @vincentkoc.",
-      "OpenAI/Responses: forward configured `text.verbosity` across Responses HTTP and WebSocket transports, surface it in `/status`, and keep per-agent verbosity precedence aligned with runtime behavior. (#47106) Thanks @merc1305 and @vincentkoc.",
-      "Pi/Codex: 添加 native Codex web search 支持 for embedded Pi runs, including config/docs/wizard coverage and managed-tool suppression when native Codex search is active. (#46579) Thanks @Evizero.",
-      "Slack/exec approvals: 添加 native Slack approval routing and approver authorization so exec approval prompts can stay in Slack instead of falling back to the Web 界面 or terminal. Thanks @vincentkoc.",
-      "TTS: 添加 structured provider diagnostics and fallback attempt analytics. (#57954) Thanks @joshavant.",
-      "WhatsApp/reactions: agents can now react with emoji on incoming WhatsApp messages, enabling more natural conversational interactions like acknowledging a photo with ❤️ instead of typing a reply. Thanks @mcaxtr.",
-      "Agents/BTW: force `/btw` side questions to disable provider reasoning so Anthropic adaptive-thinking sessions stop failing with `No BTW response generated`. 修复es #55376. Thanks @Catteres and @vincentkoc.",
-      "CLI/onboarding: reset the remote gateway URL prompt to the safe loopback default after declining a discovered endpoint, so onboarding does not keep a previously rejected remote URL. (#57828)",
-      "Agents/exec defaults: honor per-agent `tools.exec` defaults when no inline directive or session override is present, so configured exec host, 安全, ask, and node settings actually apply. (#57689)",
-      "Sandbox/networking: sanitize SSH subprocess env vars through the shared sandbox policy and route marketplace archive downloads plus Ollama discovery, auth, and pull requests through the guarded fetch path so sandboxed execution and remote fetches follow the repo's trust boundaries. (#57848, #57850)"
-    ],
-    "improvements": [
-      "Nodes/exec: 移除 the duplicated `nodes.run` shell wrapper from the CLI and agent `nodes` tool so node shell execution always goes through `exec host=node`, keeping node-specific capabilities on `nodes invoke` and the dedicated media/location/notify actions.",
-      "插件 SDK: deprecate the legacy provider compat subpaths plus the older bundled provider setup and channel-runtime 兼容性 shims, emit migration warnings, and keep the current documented `openclaw/插件-sdk/*` entrypoints plus local `API.ts` / `runtime-API.ts` barrels as the forward path ahead of a future major-release removal.",
-      "Skills/install and 插件s/install: b界面lt-in dangerous-code `critical` findings and install-time scan failures now fail closed by default, so 插件 installs and gateway-backed skill dependency installs that previously succeeded may now req界面re an explicit dangerous override such as `--dangerously-force-unsafe-install` to proceed.",
-      "Gateway/auth: `trusted-proxy` now rejects mixed shared-token configs, and local-direct fallback req界面res the configured token instead of implicitly authenticating same-host callers. Thanks @zhangning-agent, @jacobtomlinson, and @vincentkoc.",
-      "Gateway/node commands: node commands now stay disabled until node pairing is approved, so device pairing alone is no longer enough to expose declared node commands. (#57777) Thanks @jacobtomlinson.",
-      "Gateway/node events: node-originated runs now stay on a reduced trusted surface, so notification-driven or node-triggered flows that previously relied on broader host/session tool access may need adjustment. (#57691) Thanks @jacobtomlinson."
-    ],
-    "bugfixes": [
-      "Agents/OpenAI Responses: normalize raw bundled MCP tool schemas on the WebSocket/Responses path so bare-object, object-ish, and top-level union MCP tools no longer get rejected by OpenAI during tool registration. (#58299) Thanks @yelog.",
-      "ACP/安全: replace ACP's dangerous-tool name override with semantic approval classes, so only narrow readonly reads/searches can auto-approve while indirect exec-capable and control-plane tools always req界面re explicit prompt approval. Thanks @vincentkoc.",
-      "ACP/sessions_spawn: register ACP child runs for completion tracking and lifecycle cleanup, and make registration-failure cleanup explicitly best-effort so callers do not assume an already-started ACP turn was fully aborted. (#40885) Thanks @xaeon2026 and @vincentkoc.",
-      "ACP/tasks: mark cleanly exited ACP runs as blocked when they end on deterministic write or authorization blockers, and wake the parent session with a follow-up instead of falsely reporting success.",
-      "ACPX/runtime: derive the bundled ACPX expected version from the extension package metadata instead of hardcoding a separate literal, so 插件-local ACPX installs stop drifting out of health-check parity after version bumps. (#49089) Thanks @jiejiesks and @vincentkoc.",
-      "Agents/Anthropic failover: treat Anthropic `API_error` payloads with `An unexpected error occurred while processing the response` as transient so retry/fallback can engage instead of surfacing a terminal failure. (#57441) Thanks @zijiess and @vincentkoc.",
-      "Agents/compaction: keep late compaction-retry rejections handled after the aggregate timeout path wins without swallowing real pre-timeout wait failures, so timed-out retries no longer surface an unhandled rejection on later unsubscribe. (#57451) Thanks @mpz4life and @vincentkoc.",
-      "Agents/context pruning: count supplementary-plane CJK characters with the shared code-point-aware estimator so context pruning stops underestimating Japanese and Chinese text that uses Extension B ideographs. (#39985) Thanks @Edward-Qiang-2024.",
-      "Agents/Kimi: preserve already-valid Anthropic-compatible tool call argument objects while still clearing cached repairs when later trailing junk exceeds the repair allowance. (#54491) Thanks @yuanaichi.",
-      "Agents/MCP: dispose bundled MCP runtimes after one-shot `openclaw agent --local` runs finish, while preserving bundled MCP state across in-run retries so local JSON runs exit cleanly without restarting stateful MCP tools mid-run.",
-      "Agents/MCP: reuse bundled MCP runtimes across turns in the same session, while recreating them when MCP config changes and disposing stale runtimes cleanly on session rollover. (#55090) Thanks @allan0509.",
-      "Agents/memory flush: keep daily memory flush files append-only during embedded attempts so compaction writes do not overwrite earlier notes. (#53725) Thanks @HPluseven.",
-      "Agents/sandbox: honor `tools.sandbox.tools.alsoAllow`, let explicit sandbox re-allows 移除 matching b界面lt-in default-deny tools, and keep sandbox explain/error g界面dance aligned with the effective sandbox tool policy. (#54492) Thanks @ngutman.",
-      "Agents/sandbox: make remote FS bridge reads pin the parent path and open the file atomically in the helper so read access cannot race path resolution. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Agents/silent turns: fail closed on silent memory-flush runs so narrated `NO_REPLY` self-talk cannot stream or finalize into external replies even when block streaming is enabled. (#52593)",
-      "Agents/subagents: 修复 interim subagent runtime display so `/subagents list` and `/subagents info` stop inflating short runtimes and show second-level durations correctly. (#57739) Thanks @samzong.",
-      "Anthropic/OAuth: inject `/fast` `service_tier` hints for direct `sk-ant-oat-*` requests so OAuth-authenticated Anthropic runs stop missing the same overload-routing signal as API-key traffic. 修复es #55758. Thanks @Cypherm and @vincentkoc.",
-      "Anthropic/service tiers: 支持 explicit `serviceTier` model params for direct Anthropic requests and let them override `/fast` defaults when both are set. (#45453) Thanks @vincentkoc.",
-      "Auto-reply/fast: accept `/fast status` on the directive-only path, align help/status text with the documented `status|on|off` syntax, and keep current-state replies consistent across command surfaces. 修复es #46095. Thanks @weissfl and @vincentkoc.",
-      "Azure OpenAI/custom providers: use the `azure-openai-responses` path for Azure custom providers so Azure OpenAI endpoints stay on the correct Responses 集成 surface. (#50851) Thanks @kunalk16.",
-      "BlueBubbles/iMessage: coalesce URL-only inbound messages with their link-preview balloon again so sharing a bare link no longer drops the URL from agent context. Thanks @vincentkoc.",
-      "Browser/插件s: auto-enable the bundled browser 插件 when browser config or browser tool policy already references it, and show a clearer CLI error when `插件s.allow` excludes `browser`.",
-      "CI/dev checks: default local `pnpm check` to a lower-memory typecheck/lint path while keeping CI on the normal parallel path, and harden Telegram test typing/literals around native TypeScript-Go tooling crashes.",
-      "Tasks: 添加 a small task-flow runtime substrate for authoring layers with persisted wait targets and output bags, plus bundled skills/Lobster examples and richer `flows show` / `doctor` recovery hints for multi-task flow state. (#58336) Thanks @mbelinky and @vincentkoc.",
-      "Config/legacy cleanup: stop probing obsolete alternate legacy config names and service labels during local config/service detection, while keeping the active `~/.openclaw/openclaw.json` path canonical.",
-      "Config/runtime: pin the first successful config load in memory for the running process and refresh that snapshot on successful writes/reloads, so hot paths stop reparsing `openclaw.json` between watcher-driven swaps.",
-      "Config/SecretRef + Control 界面: harden SecretRef redaction round-trip restore, block unsafe raw fallback (force Form mode when raw is unavailable), and preflight submitted-config SecretRefs before config write RPC persistence. (#58044) Thanks @joshavant.",
-      "Config/Telegram: migrate 移除d `channels.telegram.groupMentionsOnly` into `channels.telegram.groups[\"*\"].req界面reMention` on load so legacy configs no longer crash at startup. (#55336) thanks @jameslcowan.",
-      "Config/更新: stop `openclaw doctor` write-backs from persisting 插件-injected channel defaults, so `openclaw 更新` no longer seeds config keys that later break service refresh validation. (#56834) Thanks @openperf.",
-      "Control 界面/agents: auto-load agent workspace files on initial Files panel open, and populate overview model/workspace/fallbacks from effective runtime agent metadata so defaulted models no longer show as `Not set`. (#56637) Thanks @dxsx84.",
-      "Control 界面/slash commands: make `/steer` and `/redirect` work from the chat command palette with visible pending state for active-run `/steer`, correct redirected-run tracking, and a single canonical `/steer` entry in the command menu. (#54625) Thanks @fuller-stack-dev.",
-      "Cron/announce: preserve all deliverable text payloads for announce mode instead of collapsing to the last chunk, so multi-line cron reports deliver in full to Telegram forum topics.",
-      "Cron/isolated sessions: carry the full live-session provider, model, and auth-profile selection across retry restarts so cron jobs with model overrides no longer fail or loop on mid-run model-switch requests. (#57972) Thanks @issaba1.",
-      "Diffs/config: preserve schema-shaped 插件 config parsing from `diffs插件ConfigSchema.safeParse()`, so direct callers keep `defaults` and `安全` sections instead of receiving flattened tool defaults. (#57904) Thanks @gumadeiras.",
-      "Diffs: fall back to plain text when `lang` hints are invalid during diff render and viewer hydration, so bad or stale language values no longer break the diff viewer. (#57902) Thanks @gumadeiras.",
-      "Discord/voice: enforce the same g界面ld channel and member allowlist checks on spoken voice ingress before transcription, so joined voice channels no longer accept speech from users outside the configured Discord access policy. Thanks @cyjhhh and @vincentkoc.",
-      "Docker/setup: force B界面ldKit for local image b界面lds (including sandbox image b界面lds) so `./docker-setup.sh` no longer fails on `RUN --mount=...` when hosts default to Docker's legacy b界面lder. (#56681) Thanks @zhangh界面-china.",
-      "Docs/anchors: 修复 broken English docs links and make Mint anchor audits run against the English-source docs tree. (#57039) thanks @velvet-shark.",
-      "Doctor/插件s: skip false Matrix legacy-helper warnings when no migration plans exist, and keep bundled `enabledByDefault` 插件s in the gateway startup set. (#57931) Thanks @dinakars777.",
-      "Exec approvals/macOS: unwrap `arch` and `xcrun` before deriving shell payloads and allow-always patterns, so wrapper approvals stay bound to the carried command instead of the outer carrier. Thanks @tdjackey and @vincentkoc.",
-      "Exec approvals: unwrap `caffeinate` and `sandbox-exec` before persisting allow-always trust so later shell payload changes still req界面re a fresh approval. Thanks @tdjackey and @vincentkoc.",
-      "Exec/approvals: infer Discord and Telegram exec approvers from existing owner config when `execApprovals.approvers` is unset, extend the default approval window to 30 minutes, and clarify approval-unavailable g界面dance so approvals do not appear to silently disappear.",
-      "Exec/approvals: keep `awk` and `sed` family binaries out of the low-risk `safeBins` fast path, and stop doctor profile scaffolding from treating them like ordinary custom filters. Thanks @vincentkoc.",
-      "Exec/env: block proxy, TLS, and Docker endpoint env overrides in host execution so request-scoped commands cannot silently reroute outbound traffic or trust attacker-supplied certificate settings. Thanks @AntAI安全Lab.",
-      "Exec/env: block Python package index override variables from request-scoped host exec environment sanitization so package fetches cannot be redirected through a caller-supplied index. Thanks @nexrin and @vincentkoc.",
-      "Exec/node: stop gateway-side workdir fallback from rewriting explicit `host=node` cwd values to the gateway filesystem, so remote node exec approval and runs keep using the intended node-local directory. (#50961) Thanks @openperf.",
-      "Exec/runtime: default implicit exec to `host=auto`, resolve that target to sandbox only when a sandbox runtime exists, keep explicit `host=sandbox` fail-closed without sandbox, and show `/exec` effective host state in runtime status/docs.",
-      "Exec: fail closed when the implicit sandbox host has no sandbox runtime, and stop denied async approval followups from reusing prior command output from the same session. (#56800) Thanks @scoootscooob.",
-      "Feishu/groups: keep quoted replies and topic bootstrap context aligned with group sender allowlists so only allowlisted thread messages seed agent context. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Gateway/attachments: offload large inbound images without leaking `media://` markers into text-only runs, preserve mixed attachment order for model input/transcripts, and fail closed when model image capability cannot be resolved. (#55513) Thanks @Syysean.",
-      "Gateway/auth: keep shared-auth rate limiting active during WebSocket handshake attempts even when callers also send device-token candidates, so bogus device-token fields no longer suppress shared-secret brute-force tracking. Thanks @kexinoh and @vincentkoc.",
-      "Gateway/auth: reject mismatched browser `Origin` headers on trusted-proxy HTTP operator requests while keeping origin-less headless proxy clients working. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Gateway/device tokens: disconnect active device sessions after token rotation so newly rotated credentials revoke existing live connections immediately instead of waiting for those sockets to close naturally. Thanks @zsxsoft and @vincentkoc.",
-      "Gateway/health: carry webhook-vs-polling account mode from channel descriptors into runtime snapshots so passive channels like LINE and BlueBubbles skip false stale-socket health failures. (#47488) Thanks @karesans界面-u.",
-      "Gateway/pairing: restore QR bootstrap onboarding handoff so fresh `/pair qr` iPhone setup can auto-approve the initial node pairing, receive a reusable node device token, and stop retrying with spent bootstrap auth. (#58382) Thanks @ngutman.",
-      "Gateway/OpenAI 兼容性: accept flat Responses API function tool definitions on `/v1/responses` and preserve `strict` when normalizing hosted tools into the embedded runner, so spec-compliant clients like Codex no longer fail validation or silently lose strict tool enforcement. Thanks @malaiwah and @vincentkoc.",
-      "Gateway/OpenAI HTTP: restore default operator scopes for bearer-authenticated requests that omit `x-openclaw-scopes`, so headless `/v1/chat/completions` and session-history callers work again after the recent method-scope hardening. (#57596) Thanks @openperf.",
-      "Gateway/插件s: scope 插件-auth HTTP route runtime clients to read-only access and keep gateway-authenticated 插件 routes on write scope, so 插件-owned webhook handlers do not inherit write-capable runtime access by default. Thanks @davidluzsilva and @vincentkoc.",
-      "Gateway/SecretRef: resolve restart token drift checks with merged service/runtime env sources and hard-fail un支持ed mutable SecretRef plus OAuth-profile combinations so restart warnings and policy enforcement match runtime behavior. (#58141) Thanks @joshavant.",
-      "Gateway/tools HTTP: tighten HTTP tool-invoke authorization so owner-only tools stay off HTTP invoke paths. (#57773) Thanks @jacobtomlinson.",
-      "Harden async approval followup delivery in webchat-only sessions (#57359) Thanks @joshavant.",
-      "Heartbeat/auth: prevent exec-event heartbeat runs from inheriting owner-only tool access from the session delivery target, so node exec output stays on the non-owner tool surface even when the target session belongs to the owner. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Hooks/config: accept runtime channel 插件 ids in `hooks.mappings[].channel` (for example `feishu`) instead of rejecting non-core channels during config validation. (#56226) Thanks @AiKrai001.",
-      "Hooks/session routing: rebind hook-triggered `agent:` session keys to the actual target agent before isolated dispatch so dedicated hook agents keep their own session-scoped tool and 插件 identity. Thanks @kexinoh and @vincentkoc.",
-      "Host exec/env: block 添加itional request-scoped env overrides that can redirect Docker endpoints, trust roots, compiler include paths, package resolution, or Python environment roots during approved host runs. Thanks @tdjackey and @vincentkoc.",
-      "Image generation/b界面ld: write stable runtime alias files into `dist/` and route provider-auth runtime lookups through those aliases so image-generation providers keep resolving auth/runtime modules after reb界面lds instead of crashing on missing hashed chunk files.",
-      "iOS/Live Activities: mark the `ActivityKit` import in `LiveActivityManager.swift` as `@preconcurrency` so Xcode 26.4 / Swift 6 b界面lds stop failing on strict concurrency checks. (#57180) Thanks @ngutman.",
-      "LINE/ACP: 添加 current-conversation binding and inbound binding-routing parity so `/acp spawn ... --thread here`, configured ACP bindings, and active conversation-bound ACP sessions work on LINE like the other conversation channels.",
-      "LINE/markdown: preserve underscores inside Latin, Cyrillic, and CJK words when stripping markdown, while still removing standalone `_italic_` markers on the shared text-runtime path used by LINE and TTS. (#47465) Thanks @jackjin1997.",
-      "LINE/status: stop `openclaw status` from warning about missing credentials when sanitized LINE snapshots are already configured, while still surfacing whether the missing field is the token or secret. (#45701) Thanks @tamaosamu.",
-      "macOS/local gateway: stop OpenClaw.app from killing healthy local gateway listeners after startup by recognizing the current `openclaw-gateway` process title and using the current `openclaw gateway` launch shape.",
-      "macOS/wide-area discovery: switch gateway discovery to Tailscale MagicDNS names so Mac clients recover more reliably across changing tailnet IPs. (#57833) Thanks @jacobtomlinson.",
-      "Matrix/CLI send: start one-off Matrix send clients before outbound delivery so `openclaw message send --channel matrix` restores E2EE in encrypted rooms instead of sending plain events. (#57936) Thanks @gumadeiras.",
-      "Matrix/context: filter fetched room context by sender allowlists so reply and thread context lookup no longer pulls non-allowlisted messages into agent context. (#58376) Thanks @jacobtomlinson.",
-      "Matrix/delivery recovery: treat Synapse `User not in room` replay failures as permanent during startup recovery so poisoned queued messages move to `failed/` instead of crash-looping Matrix after restart. (#57426) thanks @dlardo.",
-      "Matrix/direct rooms: recover fresh auto-joined 1:1 DMs without eagerly persisting invite-only `m.direct` mappings, while keeping named, aliased, and explicitly configured rooms on the room path. (#58024) Thanks @gumadeiras.",
-      "Matrix/direct rooms: stop trusting remote `is_direct`, honor explicit local `is_direct: false` for discovered DM candidates, and avoid extra member-state lookups for shared rooms so DM routing and repair stay aligned. (#57124) Thanks @w-sss.",
-      "Matrix/DM threads: keep strict unnamed fresh-invite rooms promotable even when Matrix omits the optional direct hint, preserve repair-failed local DM promotions while still revalidating later room metadata, and keep both bound and thread-isolated Matrix sessions reporting the correct route policy. (#58099) Thanks @gumadeiras.",
-      "Matrix/插件 loading: ship and source-load the crypto bootstrap runtime sidecar correctly so current `main` stops warning about failed Matrix bootstrap loads and `matrix/index` 插件-id mismatches on every invocation. (#53298) thanks @keithce.",
-      "Mattermost/websocket: detect stale Mattermost WebSocket sessions after bot disable/enable cycles so monitoring reconnects cleanly instead of silently staying stale. (#53604) Thanks @Qinsam.",
-      "Media/downloads: stop forwarding auth and cookie headers across cross-origin redirects during media saves, while preserving safe request headers for same-origin redirect chains. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Media/images: reject oversized decoded image inputs before metadata and resize backends run, so tiny compressed image bombs fail early instead of exhausting gateway memory. (#58226) Thanks @AntAI安全Lab and @vincentkoc.",
-      "Memory/doctor: probe QMD availability from the agent workspace too, so `openclaw doctor` no longer falsely reports relative `memory.qmd.command` configs as broken while runtime search still works. Thanks @vincentkoc.",
-      "Memory/doctor: suppress the orphan transcript cleanup warning when QMD session indexing is enabled, so doctor no longer suggests deleting transcript history that QMD still uses for recall. (#40584) Thanks @Gyarados4157 and @vincentkoc.",
-      "Memory/FTS: 添加 configurable trigram tokenization plus short-CJK substring fallback so memory search can find Chinese, Japanese, and Korean text without breaking mixed long-and-short queries. Thanks @carrotRakko.",
-      "Memory/FTS: keep provider-less keyword hits visible at the default memory-search threshold, so FTS-only recall works without req界面ring `--min-score 0`. (#56473) Thanks @opriz.",
-      "Memory/LanceDB: resolve runtime dependency manifest lookup from the bundled `extensions/memory-lancedb` path (including flattened dist chunks) so startup no longer fails with a missing `@lancedb/lancedb` dependency error. (#56623) Thanks @LUKSOAgent.",
-      "Memory/QMD: 添加 `memory.qmd.searchTool` as an exact mcporter tool override, so custom QMD MCP tools such as `hybrid_search` can be used without weakening the validated `searchMode` config surface. (#27801) Thanks @keramblock.",
-      "Memory/QMD: honor `memory.qmd.更新.embedInterval` even when regular QMD 更新 cadence is disabled or slower by arming a dedicated embed-cadence maintenance timer, while avoiding redundant timers when regular 更新s are already frequent enough. (#37326) Thanks @barronlroth.",
-      "Memory/QMD: include deduplicated default plus per-agent `memorySearch.extraPaths` when b界面lding QMD custom collections, so shared and agent-specific extra roots both get indexed consistently. (#57315) Thanks @Vitalcheffe and @vincentkoc.",
-      "Memory/QMD: keep `memory_search` session-hit paths roundtrip-safe when exported session markdown lives under the workspace `qmd/` directory, so `memory_get` can read the exact returned path instead of failing on the generic `qmd/sessions/...` alias. (#43519) Thanks @holgergruenhagen and @vincentkoc.",
-      "Memory/QMD: keep `qmd embed` active in `search` mode too, so BM25-first setups still b界面ld a complete index for later vector and hybrid retrieval. (#54509) Thanks @hnshah and @vincentkoc.",
-      "Memory/QMD: keep reset and deleted session transcripts in QMD session export so daily session resets do not silently drop most historical recall from `memory_search`. (#30220) Thanks @pushkarsingh32.",
-      "Memory/QMD: pass a direct-session key on `openclaw memory search` so CLI QMD searches no longer get denied as `session=<none>` under direct-only scope defaults. (#43517) Thanks @waynecc-at and @vincentkoc.",
-      "Memory/QMD: point `QMD_CONFIG_DIR` at the nested `xdg-config/qmd` directory so per-agent collection config resolves correctly. (#39078) Thanks @smart-tinker and @vincentkoc.",
-      "Memory/QMD: preserve explicit `start_line` and `end_line` metadata from mcporter query results so `memory search` hits keep the real snippet offsets instead of falling back to the snippet header. (#47960) Thanks @vincentkoc.",
-      "Memory/QMD: rebind collections when QMD reports a changed pattern but omits path metadata, so config pattern changes stop being silently ignored on restart. (#49897) Thanks @Madruru.",
-      "Memory/QMD: resolve slugified `memory_search` file hints back to the indexed filesystem path before returning search hits, so `memory_get` works again for mixed-case and spaced paths. (#50313) Thanks @erra9x.",
-      "Memory/QMD: send MCP `query` collection filters as the upstream `collections` array instead of the legacy singular `collection` field, so mcporter-backed QMD 1.1+ searches still scope correctly after the unified `query` tool migration. (#54728) Thanks @armanddp and @vincentkoc.",
-      "Memory/QMD: serialize cross-process `qmd embed` runs behind a shared lock and stagger periodic embed timers so multi-agent QMD collections stop thundering-herding on startup and every maintenance interval. Thanks @vincentkoc.",
-      "Memory/QMD: stop rewriting Han/CJK BM25 queries before `qmd search`, so OpenClaw search semantics match direct QMD results for mixed and spaced Chinese queries. Thanks @vincentkoc.",
-      "Memory/QMD: surface degraded vector status from `qmd status` so `openclaw memory status --deep` warns when semantic search is unavailable because the index still has `0` vectors. 修复es #28169. Thanks @vincentkoc.",
-      "Memory/QMD: treat null-byte collection corruption the same when QMD surfaces it as `ENOENT`, so managed-collection repair still reb界面lds and retries instead of leaving QMD stuck on a broken path. Thanks @vincentkoc.",
-      "Memory/QMD: warn explicitly when `memory.backend=qmd` is configured but the `qmd` binary is missing, so doctor and runtime fallback no longer fail as a silent b界面ltin downgrade. (#50439) Thanks @Jimmy-xuzimo and @vincentkoc.",
-      "Memory/QMD: weight CJK-heavy text correctly when estimating chunk sizes, preserve surrogate-pair characters during fine splits, and keep long Latin lines on the old chunk boundaries so memory indexing produces better-sized chunks for CJK notes. (#40271) Thanks @AaronLuo00.",
-      "Memory/session indexer: include `.jsonl.reset.*` and `.jsonl.deleted.*` transcripts in the memory host session scan while still excluding `.jsonl.bak.*` compaction backups and lock files, so memory search sees archived session history without duplicating stale snapshots. Thanks @hclsys and @vincentkoc.",
-      "Microsoft Teams/threads: filter fetched thread history by sender allowlists so thread context seeding no longer pulls messages from disallowed users. (#57723) Thanks @jacobtomlinson.",
-      "OpenAI/Codex fast mode: map `/fast` to priority processing on native OpenAI and Codex Responses endpoints instead of rewriting reasoning settings, and document the exact endpoint and override behavior.",
-      "Outbound media/local files: piggyback host-local `MEDIA:` reads on the configured fs policy instead of a separate media-root check, so generated files outside the workspace can send when `tools.fs.workspaceOnly=false` while plaintext-like host files stay blocked by the outbound media allowlist.",
-      "Pairing: enforce pending request limits per account instead of per shared channel queue, so one account's outstanding pairing challenges no longer block new pairing on other accounts. Thanks @smaeljaish771 and @vincentkoc.",
-      "插件s/ClawHub: sanitize temporary archive filenames for scoped package names and slash-containing skill slugs so `openclaw 插件s install @scope/name` no longer fails with `ENOENT` during archive download. (#56452) Thanks @soimy.",
-      "插件s/CLI: 添加 descriptor-backed lazy 插件 CLI registration so Matrix can keep its CLI module lazy-loaded without dropping `openclaw matrix ...` from parse-time command registration. (#57165) Thanks @gumadeiras.",
-      "插件s/CLI: collect root-help 插件 descriptors through a dedicated non-activating CLI metadata path so enabled 插件s keep validated config semantics without triggering runtime-only 插件 registration work, while preserving runtime CLI command registration for legacy channel 插件s that still wire commands from full registration. (#57294) thanks @gumadeiras.",
-      "插件s/facades: guard bundled 插件 facade loads with a cache-first sentinel so circular re-entry stops crashing `xai`, `sglang`, and `vllm` during gateway 插件 startup. (#57508) Thanks @openperf.",
-      "插件s/Matrix: mirror the Matrix crypto WASM runtime dependency into the root packaged install and enforce root/插件 dependency parity so bundled Matrix E2EE crypto resolves correctly in shipped b界面lds. (#57163) Thanks @gumadeiras.",
-      "插件s/startup: block workspace `.env` from overriding `OPENCLAW_BUNDLED_插件S_DIR`, so bundled 插件 trust roots only come from inherited runtime env or package resolution instead of repo-local dotenv files. Thanks @nexrin and @vincentkoc.",
-      "Sandbox/browser: install `fonts-noto-cjk` in the sandbox browser image so screenshots render Chinese, Japanese, and Korean text correctly instead of tofu boxes. 修复es #35597. Thanks @carrotRakko and @vincentkoc.",
-      "安全/LINE: make webhook signature validation run the timing-safe compare even when the supplied signature length is wrong, closing a small timing side-channel. (#55663) Thanks @gavyngong.",
-      "Sessions/Feishu: preserve conversation ids that legitimately embed `:topic:` in shared session helper parsing, while keeping Telegram topic session parsing intact. (#58100) Thanks @gumadeiras.",
-      "Slack/status reactions: 添加 a reaction lifecycle for queued, thinking, tool, done, and error phases in Slack monitors, with safer cleanup so queued ack reactions stay correct across silent runs, pre-reply failures, and delayed transitions. (#56430) Thanks @hsiaoa.",
-      "Status/node-only hosts: teach `openclaw status` to handle node-only hosts on current `main` without the old mixed gateway assumptions. (#56718) Thanks @ImLukeF.",
-      "Status: 修复 cache hit rate exceeding 100% by deriving denominator from prompt-side token fields instead of potentially undersized totalTokens. 修复es #26643.",
-      "Telegram/audio: transcode Telegram voice-note `.ogg` attachments before the local `whisper-cli` auto fallback runs, and keep mention-preflight transcription enabled in auto mode when `tools.media.audio` is unset.",
-      "Telegram/forum topics: restore reply routing to the active topic and keep ACP `sessions_spawn(..., thread=true, mode=\"session\")` bound to that same topic instead of falling back to root chat or losing follow-up routing. (#56060) Thanks @one27001.",
-      "Telegram/media: allow RFC 2544 benchmark-range Telegram CDN resolutions during media downloads, so voice messages, PDFs, and other attachments no longer fail with `Failed to download media`. (#57624) Thanks @MoerAI.",
-      "Telegram/native commands: pre修复 native command menu callback payloads and preserve `CommandSource: \"native\"` when Telegram replays them through callback queries, so `/fast` and other native command menus keep working even when text-command routing is disabled. Thanks @vincentkoc.",
-      "Telegram/polling: keep the watchdog from aborting long-running reply delivery by treating recent non-polling API activity as bounded liveness instead of a hard stall. (#56343) Thanks @openperf.",
-      "Tools/web_fetch: 添加 an explicit trusted env-proxy path for proxy-only installs while keeping strict SSRF fetches on the pinned direct path, so trusted proxy routing does not weaken strict destination binding. (#50650) Thanks @kkav004.",
-      "Tools/web_search: localize the shared search cache to module scope so same-process global symbol lookups can no longer inspect or mutate cached web-search responses. Thanks @vincentkoc.",
-      "TTS/Microsoft: auto-switch the default Edge voice to Chinese for CJK-dominant text without overriding explicitly selected Microsoft voices. (#52355) Thanks @extrasmall0.",
-      "TTS: Restore 3.28 schema 兼容性 and fallback observability. (#57953) Thanks @joshavant.",
-      "T界面/chat: keep optimistic outbound user messages visible during active runs by deferring local-run binding until the first gateway chat event reveals the real run id, preventing premature history reloads from wiping pending local sends. (#54722) Thanks @seanturner001.",
-      "T界面/model picker: keep searchable `/model` and `/models` input mode from hijacking `j`/`k` as navigation keys, and harden width bounds under `m`-filtered model lists so search no longer crashes on long rows. (#30156) Thanks @briannicholls.",
-      "Voice Call/media stream: cap inbound WebSocket frame size before `start` validation so oversized pre-start frames are dropped before JSON parsing. Thanks @Kazamayc and @vincentkoc.",
-      "Voice call/Plivo: pin stored callback bases to the configured public webhook URL so later call-control redirects stay on the intended origin even if webhook transport metadata differs. Thanks @zsxsoft and @vincentkoc.",
-      "Web 界面/markdown: stop bare auto-links from swallowing adjacent CJK text while preserving valid mixed-script path and query characters in rendered links. (#48410) Thanks @jnuyao.",
-      "Approvals/界面: keep the newest pending approval at the front of the Control 界面 queue so approving one request does not accidentally target an older expired id. Thanks @vincentkoc.",
-      "Auth profiles/OAuth: refresh runtime auth snapshots when saving rotated credentials so OAuth providers do not reuse consumed refresh tokens after the first token rotation. 修复es #55389. Thanks @sam26880 and @vincentkoc.",
-      "Browser/screenshot: use `fromSurface: false` in raw CDP screenshots to avoid a Chromium compositor 问题 that drops cross-origin image textures (QR codes, CDN assets), and preserve pre-existing device emulation state across full-page viewport expansion. (#54358) Thanks @FMLS.",
-      "ClawDock/docs: move the helper scripts to `scripts/clawdock`, publish ClawDock as a first-class docs page on the docs site, and document reinstalling local helper copies from the new raw GitHub path. (#23912) thanks @Olshansk.",
-      "Control 界面/gateway: clear queued browser connect timeouts on client stop so aborted or replaced gateway clients do not send delayed connect requests after shutdown. (#57338) thanks @gumadeiras.",
-      "Control 界面/gateway: reconnect the browser client when gateway event sequence gaps are detected, so stale non-chat state recovers automatically instead of only telling the user to refresh. (#23912) thanks @Olshansk.",
-      "Exec approvals/channels: unify Discord and Telegram exec approval runtime handling, move approval buttons onto the shared interactive reply model, and 修复 Telegram approval buttons and typed `/approve` commands so configured approvers can resolve requests reliably again. (#57516) Thanks @scoootscooob.",
-      "Gateway/SQLite transient handling: keep unhandled `SQLITE_CANTOPEN`, `SQLITE_BUSY`, `SQLITE_LOCKED`, and `SQLITE_IOERR` failures non-fatal in the global rejection handler so macOS LaunchAgent restarts do not enter a crash-throttle loop. (#57018)",
-      "Hooks/插件s/skills: block workspace `.env` overrides for bundled root directories so workspace startup cannot redirect bundled trust roots away from the packaged defaults. Thanks @nexrin and @vincentkoc.",
-      "LINE/webhooks: cap shared concurrent pre-verify webhook body reads so excess requests are rejected before entering the LINE body handler. Thanks @nexrin and @vincentkoc.",
-      "Memory/QMD: preserve explicit custom collection names for shared paths outside the agent workspace so `memory_search` stops appending `-<agentId>` to externally managed QMD collections. (#52539) Thanks @lobsrice and @vincentkoc.",
-      "Memory/b界面ltin: keep memory-file indexing active in FTS-only mode (no embedding provider) so forced reindexes no longer swap in an empty index and wipe existing memory chunks. (#42714) Thanks @asamimei.",
-      "Nostr/config: redact `channels.nostr.privateKey` in config snapshots and Control 界面 config views, so Nostr signing keys no longer appear in plain text. Thanks @ccreater222.",
-      "插件 approvals: accept unique short approval-id pre修复es on `插件.approval.resolve`, matching exec approvals and restoring `/approve` fallback flows on chat approval surfaces. Thanks @vincentkoc.",
-      "SSH sandbox/upload: reject workspace symlinks that resolve outside the uploaded tree before syncing to the remote sandbox, so later agent writes cannot be redirected through escaped links. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Slack/interactive replies: resolve Slack Block Kit reply delivery from both authored `channelData.slack.blocks` payloads and directive-generated interactive replies, and keep Slack button styles mapped onto valid Block Kit button rendering so interactive replies stop dropping on Slack-specific delivery paths. Thanks @vincentkoc.",
-      "Subagents/announcements: preserve the requester agent id for inline deterministic tool spawns so named agents without channel bindings can still announce completions through the correct owner session. (#55437) Thanks @kAIborg24.",
-      "Telegram/Anthropic streaming: replace raw invalid stream-order provider errors with a safe retry message so internal `message_start/message_stop` failures do not leak into chats. (#55408) Thanks @imydal.",
-      "Tlon/media: route inbound image downloads through the shared media store, cap each download at 6 MB, and stop after 8 images per message so large Tlon posts no longer balloon local media storage. Thanks @AntAI安全Lab and @vincentkoc.",
-      "Agents/live switch: stop transient cron and subagent model overrides from being misread as persisted live-session switches, so isolated runs no longer fail with `LiveSessionModelSwitchError`. Thanks @vincentkoc.",
-      "Agents/tool-call repair: recover malformed Kimi/OpenRouter tool-call argument streams when provider preambles appear before JSON payloads, and fail closed on non-tool leading text so fragment strings do not leak into filesystem path arguments during sub-agent runs. (#56560) Thanks @Originalwhite.",
-      "Gateway/startup: keep configured primary-model warmup on the static model path so container boots do not snapshot-load provider runtime graphs just to validate a configured model. Thanks @vincentkoc.",
-      "OpenAI/Responses: omit disabled reasoning payloads across OpenAI, Codex, and Azure OpenAI request b界面lders so GPT-5 endpoints no longer reject `reasoning.effort: \"none\"`. (#58208) Thanks @jalehman.",
-      "WhatsApp/outbound: restore runtime send/action routing and outbound 兼容性 after the recent channel seam 重构 so outbound sends, reactions, and related media actions keep reaching the active session.",
-      "xAI/Responses: normalize image-bearing tool results for xAI responses payloads, including OpenResponses-style `input_image.source` parts, so image tool replays no longer 422 on the follow-up turn. (#58017) Thanks @neeravmakwana.",
-      "Zalo/webhooks: scope replay dedupe to the authenticated target so one configured account can no longer cause same-id inbound events for another target to be dropped. Thanks @smaeljaish771 and @vincentkoc.",
-      "插件s/prompt b界面ld: preserve the highest-priority `systemPrompt` when merging `before_prompt_b界面ld` hook results instead of letting lower-priority hooks overwrite it. (#58375)",
-      "Tlon/settings migration: preserve explicit empty-array settings during migration so restart-time reseeding no longer restores older file-config values. (#58370)",
-      "插件s/marketplace: harden marketplace archive installs by surfacing guarded download failures as structured install errors and deriving temp filenames from the final resolved URL. (#58267)",
-      "界面/DOM safety: b界面ld the chat delete-confirm popover and Canvas Host fallback status line with DOM nodes instead of injected HTML strings. (#58269, #58266)",
-      "Media/file handling: create image temp work directories under the shared OpenClaw temp root and stop widening allowed local media roots from reply or tool source paths, keeping local media access limited to configured and agent-scoped roots. (#58270, #57770)",
-      "Telegram/安全: migrate legacy pairing `allowFrom` state to the `default` account only and gate group voice-message preflight transcription on sender authorization so unauthorized senders cannot trigger paid transcription before being dropped. (#58165, #57566)",
-      "Exec approvals: stop shell init-file flags from matching persisted script-path approvals, detect command-carrier inline eval in tools like `awk`, `find`, `xargs`, `make`, and `sed`, and treat the awk family as interpreter-like so allow-always decisions no longer persist interpreter paths. (#58369, #57842, #57772)",
-      "Voice call/Telnyx: canonicalize verified webhook signatures before deriving replay keys so eq界面valent Base64 and Base64URL encodings dedupe correctly. (#57829)",
-      "Gateway/HTTP trust boundaries: ignore self-declared bearer scopes, deny dangerous HTTP tool-invoke paths by default, req界面re write scope on `/v1/embeddings`, and bind OpenAI-compatible `/v1/chat/completions` plus `/v1/responses` ingress as non-owner so external HTTP callers cannot self-upgrade access. (#57783, #57771, #57721, #57769, #57778)",
-      "Gateway/trusted config and bootstrap: clear self-declared scopes for device-less `trusted-proxy` WebSocket connects and trim the Control 界面 bootstrap payload to only the fields needed before the normal handshake. (#57692, #57727)",
-      "Skills and workspace safety: replace raw skill-file reads with a symlink-safe, root-confined loader and pin workspace-only `apply_patch` delete and directory-creation mutations to verified workspace roots so path rebind races fail closed. (#57519, #56016)",
-      "Env and filesystem hardening: block credential and gateway auth env vars from workspace `.env` files, always strip dangerous inherited host env vars such as `BROWSER` and `GIT_EDITOR`, and keep sensitive host paths and OpenClaw state roots blocked even when external sandbox bind sources are allowed. (#57767, #57559, #56024)",
-      "OpenShell and ACP file boundaries: skip symlinks and preserve trusted host-only directories during OpenShell mirror sync, and route ACP attachment reads through the shared attachment cache so local files outside allowed roots are no longer forwarded. (#57693, #57690)",
-      "Channel/webhook authorization: skip Discord audio preflight transcription for unauthorized g界面ld senders, 添加 a shared pre-auth in-flight guard to Synology Chat webhooks, and validate Microsoft Teams bearer auth before JSON body parsing. (#57695, #57722, #57686)",
-      "Infra/randomness: replace `Math.random()` in affected identifier and delay-jitter paths with shared secure-random helpers, including 界面 U界面D generation. (#57744)"
-    ]
-  }
 }
 ])
 
@@ -1208,17 +733,7 @@ const formatDate = (dateString) => {
   })
 }
 
-// 活跃版本状态
-const activeVersion = ref('')
-
-// 滚动到指定版本
-const scrollToVersion = (version) => {
-  const element = document.getElementById(`version-${version}`)
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    activeVersion.value = version
-  }
-}
+// 滚动到指定版本（已存在，无需重复声明）
 
 // 监听滚动，更新当前活跃版本
 const updateActiveVersion = () => {
@@ -1246,14 +761,28 @@ onMounted(() => {
     activeVersion.value = latest ? latest.version : changelogData.value[0].version
   }
   
+  // 添加滚动监听
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  
   // 监听滚动事件
   window.addEventListener('scroll', updateActiveVersion)
-})
+
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleNavScroll, { passive: true })
+  
+  // 初始化时检测一次位置
+  handleScroll();
+  })
 
 // 在组件卸载时移除事件监听
 onUnmounted(() => {
+  // 清理事件监听
+  window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('scroll', updateActiveVersion)
-})
+
+  // 移除滚动事件监听
+  window.removeEventListener('scroll', handleNavScroll)
+  })
 </script>
 
 <style scoped>
@@ -2098,4 +1627,353 @@ onUnmounted(() => {
       padding: 1px 4px;
     }
   }
-</style>
+
+.virtual-scroll-container {
+  height: 600px;
+  overflow-y: auto;
+  position: relative;
+  will-change: scroll-position;
+}
+
+.virtual-scroll-content {
+  position: relative;
+}
+
+.virtual-scroll-items {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
+}
+
+.changelog-item {
+  contain: layout style paint;
+  will-change: transform, opacity;
+}
+/* 导航自动隐藏样式 */
+.version-navigation {
+  position: fixed;
+  left: 20px;
+  top: 100px;
+  width: 180px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.version-navigation.nav-hidden {
+  transform: translateX(-220px);
+  opacity: 0;
+}
+
+.nav-container {
+  padding: 15px;
+}
+
+.nav-title {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item {
+  margin: 2px 0;
+}
+
+.nav-item a {
+  display: block;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: #666;
+  font-size: 14px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.nav-item a:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.nav-item.active a {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.nav-version {
+  font-weight: 500;
+}
+
+.nav-latest {
+  display: inline-block;
+  background: #1976d2;
+  color: white;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  font-weight: normal;
+}
+
+/* Back to Top Button */
+.back-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+}
+
+.back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  background: var(--color-accent-hover, var(--color-accent));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.back-to-top-icon {
+  transition: transform 0.2s ease;
+}
+
+.back-to-top:hover .back-to-top-icon {
+  transform: translateY(-2px);
+}
+
+/* Layout with Sidebar */
+.changelog-layout {
+  display: flex;
+  min-height: calc(100vh - 200px);
+  position: relative;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* Sidebar Styles */
+.changelog-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 80px;
+  height: fit-content;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  transition: all 0.3s ease;
+  z-index: 50;
+}
+
+.changelog-sidebar.sidebar-hidden {
+  width: 0;
+  overflow: hidden;
+}
+
+.sidebar-container {
+  background: var(--color-bg-secondary, var(--color-bg-tertiary));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-tertiary, var(--color-bg-secondary));
+}
+
+.sidebar-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.sidebar-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.sidebar-toggle:hover {
+  background: var(--color-accent, var(--color-text-accent));
+  color: white;
+  border-color: var(--color-accent, var(--color-text-accent));
+}
+
+.sidebar-content {
+  padding: var(--space-2);
+}
+
+.version-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.version-item {
+  margin-bottom: var(--space-1);
+}
+
+.version-link {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  color: var(--color-text-secondary);
+}
+
+.version-link:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.version-item.active .version-link {
+  background: var(--color-accent, var(--color-text-accent));
+  color: white;
+}
+
+.version-number {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.latest-badge-sidebar {
+  display: inline-block;
+  background: var(--color-success, #10b981);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.version-date {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  opacity: 0.8;
+}
+
+/* Main Content */
+.changelog-content {
+  flex: 1;
+  min-width: 0;
+  transition: margin-left 0.3s ease;
+}
+
+.changelog-content.content-expanded {
+  margin-left: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .changelog-layout {
+    padding: 0 var(--space-4);
+  }
+  
+  .changelog-sidebar {
+    width: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .changelog-layout {
+    flex-direction: column;
+    padding: 0 var(--space-4);
+  }
+  
+  .changelog-sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    max-height: none;
+    margin-bottom: var(--space-6);
+  }
+  
+  .changelog-sidebar.sidebar-hidden {
+    width: 100%;
+    height: 0;
+    margin-bottom: 0;
+  }
+  
+  .sidebar-container {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .changelog-content {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .changelog-layout {
+    padding: 0 var(--space-3);
+  }
+  
+  .sidebar-header {
+    padding: var(--space-3);
+  }
+  
+  .sidebar-content {
+    padding: var(--space-1);
+  }
+  
+  .version-link {
+    padding: var(--space-1) var(--space-2);
+  }
+}</style>
