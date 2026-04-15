@@ -159,7 +159,6 @@
       </main>
     </div>
   </div>
-</div>
 </template>
 
 <script setup>
