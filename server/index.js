@@ -13,7 +13,9 @@ app.use(express.json())
 
 // 路由
 const todoRoutes = require('./routes/todos')
+const changelogRoutes = require('./routes/changelog')
 app.use('/api/todos', todoRoutes)
+app.use('/api/changelog', changelogRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {
